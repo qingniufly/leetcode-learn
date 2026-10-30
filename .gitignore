@@ -13,3 +13,7 @@ venv/
 .vscode/
 .idea/
 *.swp
+
+# 由 tools/build.py 生成的站点产物（不提交，CI 里现生成）
+docs/index.html
+docs/problems/

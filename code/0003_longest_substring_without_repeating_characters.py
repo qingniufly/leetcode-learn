@@ -84,6 +84,92 @@ class SolutionRestart:
         return max_len
 
 
+# ======================================================================
+# 动画轨迹：让 tools/build.py 把「执行过程」导出成前端可播放的帧。
+# 每加一道新题，只需在本文件里写一个 yield 轨迹的函数，
+# 前端播放器就会自动把它渲染成动图，无需改任何 JS。
+# ======================================================================
+
+
+def trace(s: str):
+    """字典版：产出逐帧轨迹。"""
+    last = {}
+    start = 0
+    max_len = 0
+
+    for i, ch in enumerate(s):
+        prev_last = last.get(ch)
+        jumped = prev_last is not None and prev_last >= start
+        old_start = start
+        if jumped:
+            start = prev_last + 1
+        last[ch] = i
+        win_len = i - start + 1
+        max_len = max(max_len, win_len)
+
+        if jumped:
+            label = (f"'{ch}' 在窗口内上次出现在 {prev_last}（≥ start），"
+                     f"start 直接跳到 {start}，左端 {start - old_start} 个字符被丢弃。")
+            code_line = "start = last[ch] + 1"
+        elif prev_last is not None:
+            label = (f"'{ch}' 上次出现在 {prev_last}，但 {prev_last} < start({start})，"
+                     "早已滑出窗口 → start 不动，无须回退。")
+            code_line = "if ch in last and last[ch] >= start:"
+        else:
+            label = f"'{ch}' 首次出现，与窗口内字符都不冲突 → start 保持 {start}。"
+            code_line = "if ch in last and last[ch] >= start:"
+
+        yield {
+            "i": i,
+            "j": start,
+            "window": [start, i],
+            "dropped": list(range(old_start, start)),
+            "jump": {"from": old_start, "to": start, "label": f"start {old_start} → {start}"} if jumped else None,
+            "label": label,
+            "note": f'窗口 = "{s[start:i + 1]}"，长度 {win_len}',
+            "codeLine": code_line,
+            "vars": {"last": dict(last), "maxLen": max_len},
+        }
+
+
+def trace_restart(s: str):
+    """重启版：产出逐帧轨迹，用来直观展示「指针回退重扫」的浪费。"""
+    start, next_i, max_len, chars = 0, 0, 0, set()
+    ops = 0
+
+    while next_i < len(s):
+        ops += 1
+        read_idx = next_i
+        before = len(chars)
+        chars.add(s[next_i])
+        next_i += 1
+        dup = len(chars) == before
+        old_start = start
+        if dup:
+            start += 1
+            next_i = start
+            chars.clear()
+
+        if dup:
+            label = (f"读到 '{s[read_idx]}' 时发现重复：左端只挪 1 格到 {start}，"
+                     f"指针将从 {read_idx} 回退到 {start} 重扫这一段。")
+        else:
+            label = f"读到 '{s[read_idx]}'，无冲突，窗口 = '{s[old_start:read_idx + 1]}'。"
+
+        yield {
+            "i": read_idx,
+            "j": start,
+            "window": [old_start, read_idx],
+            "dropped": [old_start] if dup else [],
+            "jump": None,
+            "backLabel": "回退重扫" if dup else None,
+            "label": label,
+            "note": f"已扫描 {ops} 次",
+            "codeLine": "start += 1" if dup else "chars.add(s[next_i])",
+            "vars": {"ops": ops, "maxLen": max_len},
+        }
+
+
 def brute_force(s: str) -> int:
     """O(n^3) 暴力解，仅用于测试对拍。"""
     best = 0

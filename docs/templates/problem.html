@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ID}} · {{TITLE}} | LeetCode 解题笔记</title>
+<meta name="description" content="{{SUMMARY}}" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230969da%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2719%27 font-family=%27monospace%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3E%E7%AC%94%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="{{ROOT}}/assets/style.css" />
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow"><a href="{{ROOT}}/index.html">← 返回题目列表</a> · LeetCode {{ID}}</p>
+    <h1>{{TITLE}}</h1>
+    <p class="hero-en">{{TITLE_EN}}</p>
+    <div class="hero-meta">
+      <span class="diff diff-{{DIFFICULTY_CLASS}}">{{DIFFICULTY}}</span>
+      {{TAGS}}
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="sec-plain">
+    <p class="summary">{{SUMMARY}}</p>
+  </section>
+
+  {{NOTES_SECTION}}
+
+  <section id="demo">
+    <div class="sec-head">
+      <h2>动图讲解</h2>
+      <p>由 <code>code/</code> 里的解题程序跑出的真实执行轨迹生成，可播放 / 单步 / 重置。</p>
+    </div>
+    {{PLAYER}}
+  </section>
+
+  <section id="code">
+    <div class="sec-head">
+      <h2>完整代码</h2>
+      <p>与动图使用同一份源码。</p>
+    </div>
+    {{CODE_TABS}}
+  </section>
+
+  {{COMPLEXITY_SECTION}}
+
+</main>
+
+<nav class="pagenav"><div class="wrap">{{NAV}}</div></nav>
+
+<footer>
+  <div class="wrap">
+    <p><a href="{{ROOT}}/index.html">← 返回题目列表</a> · <a href="https://github.com/qingniufly/leetcode-learn">GitHub 仓库</a></p>
+  </div>
+</footer>
+
+<script type="application/json" id="problem-data">{{PAYLOAD}}</script>
+<script src="{{ROOT}}/assets/site.js"></script>
+</body>
+</html>

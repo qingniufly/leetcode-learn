@@ -1,10 +1,14 @@
-name: Deploy GitHub Pages
+name: Build and Deploy GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'docs/**'
+      - 'code/**'
+      - 'problems/**'
+      - 'tools/**'
+      - 'docs/assets/**'
+      - 'docs/templates/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -18,26 +22,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    name: Validate & build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          enablement: true
+          python-version: '3.11'
+
+      # 每道题的解题程序都自带自测，全部跑一遍
+      - name: Run solution self-tests
+        run: |
+          set -e
+          for f in code/*.py; do
+            echo "── $f"
+            python3 "$f"
+          done
+
+      # 校验 problems/*.json 与轨迹函数是否对得上
+      - name: Validate problem configs
+        run: python3 tools/build.py --check
+
+      # 生成 docs/index.html 与 docs/problems/*.html
+      - name: Build site
+        run: python3 tools/build.py
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

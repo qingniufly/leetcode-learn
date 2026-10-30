@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LeetCode 解题笔记</title>
+<meta name="description" content="每道题配一段可交互的动图讲解；解题程序与动图同源生成。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230969da%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2719%27 font-family=%27monospace%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3E%E7%AC%94%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="{{ASSETS}}/style.css" />
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">LeetCode Notes</p>
+    <h1>LeetCode 解题笔记</h1>
+    <p class="lede">
+      每道题配一段可交互的动图讲解。动图不是手画的 —— 它由解题程序本身跑出来的执行轨迹生成，
+      所以图里演示的每一步，都真的是代码在做的事。
+    </p>
+    <nav class="jump"><a href="#catalog">题目列表</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="catalog">
+    <div class="sec-head">
+      <h2>题目列表 <span class="count">（{{COUNT}}）</span></h2>
+      <p class="tagline">{{TAGS}}</p>
+    </div>
+    <div class="pcards">
+{{CARDS}}
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>由 <a href="https://github.com/qingniufly/leetcode-learn">qingniufly/leetcode-learn</a> 生成 · 推送 main 后自动部署</p>
+  </div>
+</footer>
+
+<script src="{{ASSETS}}/site.js"></script>
+</body>
+</html>

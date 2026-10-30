@@ -1,0 +1,42 @@
+{
+  "id": "0003",
+  "slug": "0003-longest-substring",
+  "title": "无重复字符的最长子串",
+  "title_en": "Longest Substring Without Repeating Characters",
+  "difficulty": "中等",
+  "tags": ["滑动窗口", "哈希表", "双指针"],
+  "summary": "用字典记住每个字符上一次出现的位置，窗口左端只在真正冲突时跳一次。",
+  "notes": "**核心思路**\n\n右指针 `i` 从左到右逐格推进，字典 `last` 记录每个字符上一次出现的位置：\n\n- 若 `last[ch] >= start`，说明 `ch` 在当前窗口内重复，左端 `start` **直接跳到** `last[ch] + 1`\n- 若 `last[ch] < start`，那次出现早已滑出窗口，左端**保持不动**\n- 以 `i` 结尾的最长无重复子串长度就是 `i - start + 1`，取全程最大值\n\n**最容易写错的一行**\n\n> `if ch in last and last[ch] >= start:` —— 这个 `>= start` 不能省。第四步里 `'a'` 上次出现在下标 0，但那时 `start` 已经跳到 2，位置 0 早已被滑出窗口。若此时还执行 `start = last['a'] + 1`，左端就会倒退，窗口变成 `\"aba\"`，把早已淘汰的重复字符又请回来，答案会错成 3。\n\n**为什么不能「左端只回退一格」**\n\n发现重复时把左端挪一格、再把整段重扫一遍，结果虽然正确，但最坏复杂度是 `O(n²)`：串长 `n` 时内层循环要跑约 `n(n+1)/2` 次，`n = 5×10⁴` 时约需 100 秒，必定超时。字典版把左端直接送到冲突字符的下一个位置，同一段前缀**永远只扫一次**。",
+  "code": "code/0003_longest_substring_without_repeating_characters.py",
+  "snippets": ["Solution", "SolutionWithSet", "SolutionRestart"],
+  "complexity": [
+    ["写法", "时间复杂度", "空间复杂度", "可提交"],
+    ["字典版", "O(n)", "O(min(n, |Σ|))", "✅"],
+    ["双指针 + 集合", "O(n)", "O(min(n, |Σ|))", "✅"],
+    ["重启版", "O(n²)", "O(min(n, |Σ|))", "❌ n=5×10⁴ 时约 100 秒"]
+  ],
+  "demo": {
+    "type": "window",
+    "input": "abba",
+    "compareInput": "abcdefghijkll",
+    "compareTitle": "最坏用例下两种写法并行跑一遍：注意第一行的指针在回退",
+    "lanes": [
+      {
+        "name": "字典版（推荐提交）",
+        "badge": "O(n)",
+        "variant": "good",
+        "code": "Solution",
+        "trace": "trace",
+        "showCode": true
+      },
+      {
+        "name": "重启版（初版写法）",
+        "badge": "O(n²)",
+        "variant": "warn",
+        "code": "SolutionRestart",
+        "trace": "trace_restart",
+        "showCode": false
+      }
+    ]
+  }
+}

@@ -1,57 +1,157 @@
 # leetcode-learn
 
-📚 LeetCode 解题笔记。
-
-每道题分两处存放：
-
-| 位置 | 内容 |
-| --- | --- |
-| [`code/`](code/) | 可直接提交的解题程序，附带自测脚本 |
-| [`docs/`](docs/) | 动图讲解，通过 GitHub Pages 发布 |
+📚 LeetCode 解题笔记。每道题配一段**可交互的动图讲解**，而且动图不是手画的 —— 它由解题程序本身跑出来的执行轨迹生成，所以图里演示的每一步，都真的是代码在做的事。
 
 🌐 **在线阅读**：<https://qingniufly.github.io/leetcode-learn/>
 
 ---
 
-## 本期题目
+## 目录结构
 
-| # | 题目 | 难度 | 核心解法 | 动图讲解 |
+```
+.
+├── code/            # 解题程序（按题号命名），自带自测
+│   └── 0003_longest_substring_without_repeating_characters.py
+├── problems/        # ← 每道题一份配置，加新题的主要入口
+│   └── 0003-longest-substring.json
+├── tools/
+│   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
+├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
+│   ├── assets/      #   手写：style.css / site.js（通用播放器）
+│   ├── templates/   #   手写：页面骨架
+│   ├── index.html   #   生成：题目目录页
+│   └── problems/    #   生成：每题一个页面
+└── .github/workflows/pages.yml
+```
+
+---
+
+## 动图是怎么来的
+
+```
+code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
+                                              │
+                                     tools/build.py 跑一遍
+                                              │
+                                   轨迹序列化成 JSON
+                                              │
+                                     docs/assets/site.js
+                                     （通用播放器，只管播放）
+```
+
+播放器 `site.js` 里**没有任何题目相关逻辑**，它只认识一种帧格式：
+
+```jsonc
+{
+  "i": 2,                       // 当前指针位置
+  "j": 2,                       // 窗口左端
+  "window": [2, 2],             // 当前窗口区间
+  "dropped": [0, 1],            // 这一步被丢弃的下标
+  "jump":  { "from": 0, "to": 2, "label": "start 0 → 2" },  // 可选：左端向前跳
+  "backLabel": "回退重扫",       // 可选：指针向后回退时的标注
+  "label": "这一步发生了什么",     // 说明文字
+  "note": "补充说明",
+  "codeLine": "start = last[ch] + 1",  // 源码片段，自动解析成行号做高亮
+  "vars": { "last": {"a": 0}, "maxLen": 2 }  // 状态面板显示的变量
+}
+```
+
+---
+
+## 如何添加一道新题
+
+**只需要两个文件**，其余（目录页、上下题导航、代码标签页、动图播放器、样式）全自动。
+
+### 1️⃣ 写解题程序 `code/<题号>_<题目名>.py`
+
+里面放 `Solution` 类，再加一个**轨迹函数**，把执行过程 `yield` 出来：
+
+```python
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        ...
+
+def trace(s: str):
+    """产出动画帧：tools/build.py 会把它变成前端可播放的轨迹。"""
+    for i, ch in enumerate(s):
+        yield {
+            "i": i, "j": 0, "window": [0, i], "dropped": [],
+            "jump": None,
+            "label": f"读到 '{ch}'",
+            "note": f"第 {i + 1} 步",
+            "codeLine": "return len(s)",     # 会自动匹配到源码行并高亮
+            "vars": {"ch": ch},
+        }
+```
+
+`codeLine` 写**源码片段**即可，生成器会自动在代码块里找到对应行。
+
+### 2️⃣ 写题目配置 `problems/<题号>-<slug>.json`
+
+```jsonc
+{
+  "id": "0011",
+  "slug": "0011-container-with-most-water",
+  "title": "盛最多水的容器",
+  "title_en": "Container With Most Water",
+  "difficulty": "中等",                     // 简单 / 中等 / 困难
+  "tags": ["双指针", "贪心"],
+  "summary": "一句话说清这题在干嘛。",
+  "notes": "讲解文案，支持段落、- 列表、> 引用、`行内代码`、**加粗**。",
+  "code": "code/0011_container_with_most_water.py",
+  "snippets": ["Solution"],                 // 要在页面上展示的 class
+  "complexity": [["写法", "时间", "空间"], ["双指针", "O(n)", "O(1)"]],
+  "demo": {
+    "type": "window",
+    "input": "[1,8,6,2,5,4,8,3,7]",         // 逐步演示用的输入
+    "compareInput": "...",                  // 可选：横向对比用的输入
+    "lanes": [                              // 一条轨道 = 一种写法
+      { "name": "双指针版", "badge": "O(n)", "variant": "good",
+        "code": "Solution", "trace": "trace", "showCode": true }
+    ]
+  }
+}
+```
+
+> `lanes` 有 **2 条以上**时，页面会自动多出一个「横向对比」区块，把它们并排播放，
+> 并自动算出各自的步数与倍数差。
+
+### 3️⃣ 构建 & 预览
+
+```bash
+python3 tools/build.py      # 生成 docs/index.html 与 docs/problems/*.html
+cd docs && python3 -m http.server 8000
+```
+
+推送 `main` 后，CI 会自动跑每道题的自测 → 校验配置 → 构建 → 部署 Pages。
+
+---
+
+## 题目列表
+
+| # | 题目 | 难度 | 核心解法 | 标签 |
 | --- | --- | --- | --- | --- |
-| 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | [逐步演示 + 复杂度对比](https://qingniufly.github.io/leetcode-learn/) |
+| 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | 滑动窗口 / 哈希表 / 双指针 |
 
-### 题目回顾
+🌐 [在线阅读](https://qingniufly.github.io/leetcode-learn/)
 
-给定字符串 `s`，找出不含重复字符的最长**连续**子串的长度。
+### 本期要点回顾（LeetCode 3）
 
-```
-输入: "abba"      输出: 2      （"ab" 或 "ba"）
-输入: "abcabcbb"  输出: 3      （"abc"）
-输入: "pwwkew"    输出: 3      （"wke"）
-```
+> 最容易写错的一行是 `if ch in last and last[ch] >= start:` —— 这个 `>= start` 不能省。
+> 否则左端会倒退，已淘汰的重复字符会重新进入窗口（`"abba"` 会错成 3）。
 
-### 解法要点
-
-用字典 `last` 记录每个字符**上一次出现的位置**，右指针 `i` 从左到右推进：
-
-- 若 `last[ch] >= start`，说明 `ch` 在当前窗口内重复，把左端 `start` **直接跳到** `last[ch] + 1`；
-- 若 `last[ch] < start`，说明那次出现早已滑出窗口，**左端不动**；
-- 以 `i` 结尾的最长无重复子串长度就是 `i - start + 1`，取全程最大值。
-
-两个容易踩的坑：
-
-1. **`>= start` 不能省。** 否则左端会倒退，已经淘汰的重复字符会重新进入窗口（`"abba"` 会错成 3）。
-2. **不要「左端只回退一格再重扫」。** 结果虽然正确，但最坏复杂度是 `O(n²)` —— 串长 `n` 时内层循环要跑约 `n(n+1)/2` 次，`n = 5×10⁴` 时约需 100 秒，必定超时。
+> 也不要「左端只回退一格再重扫」：结果虽然对，但最坏 `O(n²)`，串长 `n` 时内层循环跑约 `n(n+1)/2` 次，
+> `n = 5×10⁴` 时约需 100 秒，必定超时。
 
 ---
 
 ## 运行代码
 
 ```bash
-# 运行自测：边界用例 + 3000 组随机对拍 + 最坏用例耗时对比
 python3 code/0003_longest_substring_without_repeating_characters.py
 ```
 
-输出示例：
+输出：
 
 ```
 [ok] 15 个边界用例全部通过
@@ -64,29 +164,8 @@ python3 code/0003_longest_substring_without_repeating_characters.py
    1001 |           501501 |             1001 |   501.0x
 ```
 
-## 本地预览动图讲解
+## 校验配置
 
 ```bash
-cd docs && python3 -m http.server 8000
-# 浏览器打开 http://localhost:8000
+python3 tools/build.py --check     # 只校验 problems/*.json 与轨迹函数对不对得上
 ```
-
-## 目录结构
-
-```
-.
-├── code/                                  # 解题程序
-│   └── 0003_longest_substring_without_repeating_characters.py
-├── docs/                                  # GitHub Pages 站点
-│   ├── index.html                         # 动图讲解页面
-│   └── assets/
-│       ├── style.css
-│       └── app.js
-└── .github/workflows/pages.yml            # Pages 自动部署
-```
-
-## 贡献新题目
-
-1. 在 `code/` 下新增 `<题号>_<题目名>.py`，保留 `Solution` 类为提交版本，并在 `__main__` 里加自测；
-2. 在 `docs/` 里加对应的讲解页面，并在 `index.html` 的题目表格里登记；
-3. 推送到 `main`，Pages 会自动重新部署。
