@@ -280,3 +280,44 @@ footer { padding: 30px 0 42px; color: var(--muted-foreground); font-size: 13px; 
   html { scroll-behavior: auto; }
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------------- array 渲染器：配对高亮 ---------------- */
+
+.v-box.is-mark {
+  background: color-mix(in srgb, var(--viz-series-3) 26%, transparent);
+  border-color: var(--viz-series-3); border-width: 2px; opacity: 1;
+}
+.v-box.is-cur.is-mark { border-color: var(--viz-series-1); }
+
+/* ---------------- digits 渲染器：竖式加法 ---------------- */
+
+.dgrid { position: relative; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.drow { display: flex; gap: 6px; }
+.dcell { width: 46px; display: flex; justify-content: center; align-items: center; }
+.d-box {
+  width: 42px; height: 38px; display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground);
+  font-size: 17px; font-weight: 600; font-family: var(--font-mono);
+  transition: background .18s ease, border-color .18s ease;
+}
+.d-box.is-empty { background: transparent; border-style: dashed; opacity: .35; }
+.d-box.is-cur { background: color-mix(in srgb, var(--viz-series-1) 30%, transparent);
+                border-color: var(--viz-series-1); border-width: 2px; }
+.drow.dcarry { height: 22px; }
+.d-carry {
+  font-size: 12px; font-weight: 700; color: var(--viz-series-2); font-family: var(--font-mono);
+  padding: 1px 6px; border-radius: 10px; border: 1px solid var(--viz-series-2);
+  background: color-mix(in srgb, var(--viz-series-2) 14%, transparent);
+}
+.drow.dresult { margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.d-res { background: color-mix(in srgb, var(--viz-series-3) 16%, transparent);
+         border-color: color-mix(in srgb, var(--viz-series-3) 55%, var(--border)); }
+.d-res.is-new { border-color: var(--viz-series-3); border-width: 2px;
+                background: color-mix(in srgb, var(--viz-series-3) 30%, transparent); }
+
+.md-code {
+  margin: 0 0 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--muted); overflow-x: auto; font-size: 12.5px; line-height: 1.6;
+  font-family: var(--font-mono); color: var(--foreground);
+}
+.md-code:last-child { margin-bottom: 0; }

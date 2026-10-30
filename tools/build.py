@@ -132,13 +132,22 @@ def md_inline(text: str) -> str:
 
 
 def render_md(text: str) -> str:
-    """支持：段落、- 列表、> 引用、行内 `code` 与 **加粗**。"""
+    """支持：段落、- 列表、> 引用、``` 围栏代码块、行内 `code` 与 **加粗**。"""
     if not text.strip():
         return ""
     blocks = []
-    for raw in re.split(r"\n\s*\n", text.strip()):
+    chunks = re.split(r"\n\s*\n", text.strip())
+    for raw in chunks:
         lines = [l.rstrip() for l in raw.strip().split("\n") if l.strip()]
         if not lines:
+            continue
+        if lines[0].startswith("```"):
+            body = []
+            for l in lines[1:]:
+                if l.startswith("```"):
+                    break
+                body.append(l)
+            blocks.append('<pre class="md-code">%s</pre>' % html.escape("\n".join(body)))
             continue
         if all(l.startswith("- ") for l in lines):
             items = "".join("<li>%s</li>" % md_inline(l[2:]) for l in lines)
@@ -171,11 +180,11 @@ def _load_module(meta: dict):
     return code_path, import_module(code_path)
 
 
-def _run_trace(module, meta: dict, fn_name: str, demo_input: str, snippet_texts: list) -> list:
+def _run_trace(module, meta: dict, fn_name: str, args: list, snippet_texts: list) -> list:
     fn = getattr(module, fn_name, None)
     if fn is None:
         raise SystemExit("[%s] 代码文件里没有轨迹函数 %s" % (meta["id"], fn_name))
-    frames = list(fn(demo_input))
+    frames = list(fn(*args))
     for frame in frames:
         needle = frame.get("codeLine")
         frame["_codeIdx"] = -1
@@ -186,6 +195,29 @@ def _run_trace(module, meta: dict, fn_name: str, demo_input: str, snippet_texts:
                     break
         frame.pop("codeLine", None)
     return frames
+
+
+def derive_display(rtype: str, args: list, lane_cfg: dict) -> tuple:
+    """从轨迹函数的入参推导出页面上要画的东西。
+
+    array 渲染器：tokens = 数组里的元素
+    digits 渲染器：rows  = 每个加数一行，且按「高位在左」的正常阅读顺序
+    """
+    if rtype == "digits":
+        rows = lane_cfg.get("rows")
+        if not rows:
+            rows = [[str(x) for x in reversed(list(a))]
+                    for a in args if isinstance(a, (list, tuple))]
+        return [], rows
+
+    tokens = lane_cfg.get("tokens")
+    if not tokens and args:
+        first = args[0]
+        if isinstance(first, (list, tuple)):
+            tokens = [str(x) for x in first]
+        elif isinstance(first, str):
+            tokens = list(first)
+    return tokens or [], []
 
 
 def build_lane(meta: dict, lane_cfg: dict, demo: dict) -> dict:
@@ -205,19 +237,38 @@ def build_lane(meta: dict, lane_cfg: dict, demo: dict) -> dict:
         snippet_html = highlight_python(snippet)
         snippet_texts = [html.unescape(re.sub(r"<[^>]+>", "", h)) for h in snippet_html]
 
-    demo_input = lane_cfg.get("input", demo.get("input", ""))
-    compare_input = demo.get("compareInput") or demo_input
+    rtype = demo.get("type", "array")
+    if "args" in lane_cfg:
+        demo_args = lane_cfg["args"]
+    elif "args" in demo:
+        demo_args = demo["args"]
+    else:
+        demo_args = [demo.get("input", "")]
 
-    frames = _run_trace(module, meta, fn_name, demo_input, snippet_texts)
-    cmp_frames = frames if compare_input == demo_input else _run_trace(
-        module, meta, fn_name, compare_input, snippet_texts)
+    if "compareArgs" in demo:
+        compare_args = demo["compareArgs"]
+    elif "compareInput" in demo:
+        compare_args = [demo["compareInput"]]
+    else:
+        compare_args = demo_args
+
+    frames = _run_trace(module, meta, fn_name, demo_args, snippet_texts)
+    cmp_frames = frames if compare_args == demo_args else _run_trace(
+        module, meta, fn_name, compare_args, snippet_texts)
+
+    tokens, rows = derive_display(rtype, demo_args, lane_cfg)
+    cmp_tokens, cmp_rows = derive_display(rtype, compare_args, lane_cfg)
 
     return {
         "name": lane_cfg.get("name", "解法"),
         "badge": lane_cfg.get("badge", ""),
         "variant": lane_cfg.get("variant", "neutral"),
-        "input": demo_input,
-        "compareInput": compare_input,
+        "type": rtype,
+        "input": demo.get("input", ""),
+        "tokens": tokens,
+        "rows": rows,
+        "compareTokens": cmp_tokens,
+        "compareRows": cmp_rows,
         "frames": frames,
         "compareFrames": cmp_frames,
         "codeClass": class_name,

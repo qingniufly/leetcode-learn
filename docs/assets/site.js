@@ -1,14 +1,17 @@
 /* ==================================================================
    LeetCode Learn · 通用动图播放器
    ------------------------------------------------------------------
-   页面本身不含任何「题目相关」逻辑：题目数据全部由 tools/build.py
-   从 Python 轨迹函数导出，注入 #problem-data，前端只负责播放。
-   新增一种可视化 = 在 RENDERERS 里注册一个渲染函数。
+   页面不含任何「题目相关」逻辑：题目数据由 tools/build.py 从 Python
+   轨迹函数导出，注入 #problem-data，前端只负责播放。
+
+   新增一种可视化 = 在 RENDERERS 里注册一个渲染函数，
+   再在 problems/*.json 里把 demo.type 指过去即可。
    ================================================================== */
 (function () {
   'use strict';
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
+  var RENDERERS = {};          // 可视化类型注册表：新增一种画法 = 注册一个渲染器
 
   function svgEl(tag, attrs) {
     var n = document.createElementNS(SVG_NS, tag);
@@ -23,14 +26,17 @@
   }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
-  /* ---------------- 窗口型渲染器 ---------------- */
+  /* ==================================================================
+     渲染器 1：array —— 一排 token + 当前指针 + 可选区间 / 配对
+     适用于：滑动窗口、双指针、哈希表遍历、数组扫描……
+     ================================================================== */
 
-  function buildSlots(container, chars) {
+  function buildSlots(container, tokens) {
     clear(container);
     var boxes = [];
-    for (var i = 0; i < chars.length; i++) {
+    for (var i = 0; i < tokens.length; i++) {
       var slot = el('div', 'v-slot');
-      var box = el('div', 'v-box', chars[i]);
+      var box = el('div', 'v-box', tokens[i]);
       var idx = el('div', 'v-idx', String(i));
       slot.appendChild(box);
       slot.appendChild(idx);
@@ -55,6 +61,7 @@
     for (var k = 0; k < n; k++) {
       var cls = 'v-box';
       if (k === frame.i) cls += ' is-cur';
+      else if (frame.marks && frame.marks.indexOf(k) >= 0) cls += ' is-mark';
       else if (frame.dropped && frame.dropped.indexOf(k) >= 0) cls += ' is-drop';
       else if (frame.window && k >= frame.window[0] && k <= frame.window[1]) cls += ' is-win';
       else if (k < frame.j) cls += ' is-out';
@@ -70,7 +77,7 @@
     ov.setAttribute('width', sr.width);
     ov.setAttribute('height', sr.height);
 
-    // 窗口区间托架
+    // 区间托架
     if (frame.window) {
       var a = geom(stage, slots, frame.window[0]);
       var b = geom(stage, slots, frame.window[1]);
@@ -82,15 +89,16 @@
              ' L ' + b.right + ' ' + (my + 4) + ' L ' + b.right + ' ' + my,
           fill: 'none', stroke: 'var(--viz-series-2)', 'stroke-width': '1.5', 'stroke-linecap': 'round'
         }));
+        var labels = frame.bracketLabels || ['start', 'i = ' + frame.i];
         var t1 = svgEl('text', { x: a.left, y: my + 18, fill: 'var(--muted-foreground)', 'font-size': '11' });
-        t1.textContent = 'start';
+        t1.textContent = labels[0];
         ov.appendChild(t1);
         var narrow = (b.right - a.left) < 46;
         var t2 = svgEl('text', {
           x: b.right, y: my + (narrow ? 31 : 18), fill: 'var(--muted-foreground)',
           'font-size': '11', 'text-anchor': 'end'
         });
-        t2.textContent = 'i = ' + frame.i;
+        t2.textContent = labels[1];
         ov.appendChild(t2);
       }
     }
@@ -146,14 +154,89 @@
     }
   }
 
+  /* ==================================================================
+     渲染器 2：digits —— 竖式加法（两行数字 + 进位 + 结果）
+     帧字段：col（从最低位数的列号）digit carry result
+     ================================================================== */
+
+  RENDERERS.array = {
+    build: function (view, lane) {
+      view.tokens = view.tokens || lane.tokens || (lane.input || '').split('');
+      view.ovEl = svgEl('svg', { class: 'v-ov' });
+      view.slotsEl = el('div', 'v-slots');
+      view.stageEl.appendChild(view.ovEl);
+      view.stageEl.appendChild(view.slotsEl);
+      view.slots = buildSlots(view.slotsEl, view.tokens);
+    },
+    update: function (view, frame, prev) {
+      paintBoxes(view.slots, frame, view.slots.length);
+      drawOverlay(view.stageEl, view.ovEl, view.slots, frame, prev);
+    }
+  };
+
+  RENDERERS.digits = {
+    build: function (view, lane) {
+      view.rows = view.rows || lane.rows || [[]];
+      var maxLen = 0;
+      view.rows.forEach(function (r) { maxLen = Math.max(maxLen, r.length); });
+      view.ncols = maxLen + 1;                 // 多留一列给最高位的进位
+      view.ovEl = svgEl('svg', { class: 'v-ov' });
+      view.gridEl = el('div', 'dgrid');
+      view.stageEl.appendChild(view.ovEl);
+      view.stageEl.appendChild(view.gridEl);
+    },
+    update: function (view, frame) {
+      clear(view.gridEl);
+      var n = view.ncols;
+      var absCol = n - 1 - (frame.col || 0);   // 显示列（从左数）
+      var result = frame.result || [];
+
+      // 两个（或多个）加数行，右对齐
+      view.rows.forEach(function (row) {
+        var r = el('div', 'drow');
+        for (var c = 0; c < n; c++) {
+          var k = c - (n - row.length);
+          var tok = k >= 0 ? row[k] : '';
+          var box = el('div', 'd-box' + (tok === '' ? ' is-empty' : ''), tok);
+          if (c === absCol) box.classList.add('is-cur');
+          r.appendChild(box);
+        }
+        view.gridEl.appendChild(r);
+      });
+
+      // 进位行：进位流向左边一列
+      var cr = el('div', 'drow dcarry');
+      for (var c2 = 0; c2 < n; c2++) {
+        var cell = el('div', 'dcell');
+        if (c2 === absCol - 1 && frame.carry) cell.appendChild(el('div', 'd-carry', '←1'));
+        cr.appendChild(cell);
+      }
+      view.gridEl.appendChild(cr);
+
+      // 结果行：result[k] 是第 k 个产出的位（从低位起），显示在从右数第 k 列
+      var rr = el('div', 'drow dresult');
+      for (var c3 = 0; c3 < n; c3++) {
+        var kk = n - 1 - c3;
+        var digit = (kk >= 0 && kk < result.length) ? String(result[kk]) : '';
+        var rb = el('div', 'd-box d-res' + (digit === '' ? ' is-empty' : ''), digit);
+        if (kk === result.length - 1) rb.classList.add('is-new');
+        rr.appendChild(rb);
+      }
+      view.gridEl.appendChild(rr);
+    }
+  };
+
+  /* ==================================================================
+     轨道视图
+     ================================================================== */
+
   function renderVars(container, vars) {
     clear(container);
     if (!vars) return;
     var keys = Object.keys(vars);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i], v = vars[k];
-      var label = el('span', 'var-label', k);
-      container.appendChild(label);
+      container.appendChild(el('span', 'var-label', k));
       if (v && typeof v === 'object') {
         var ks = Object.keys(v);
         for (var j = 0; j < ks.length; j++) {
@@ -164,18 +247,15 @@
           container.appendChild(chip);
         }
       } else {
-        container.appendChild(el('span', 'v-chip', k + ' = ' + v));
+        container.appendChild(el('span', 'v-chip', String(v)));
       }
     }
   }
 
-  /* ---------------- 单条轨道 ---------------- */
-
   function LaneView(lane, opts) {
     this.lane = lane;
     this.opts = opts || {};
-    this.frames = (this.opts.frames && this.opts.frames(lane)) || lane.frames;
-    this.idx = 0;
+    this.frames = (this.opts.frames && this.opts.frames(lane)) || lane.frames || [];
     this.root = el('div', 'lane' + (this.opts.compact ? ' lane-compact' : ''));
     this.root.innerHTML =
       '<div class="cmp-head">' +
@@ -184,7 +264,7 @@
         '<span class="counter"></span>' +
       '</div>' +
       '<div class="v-status"></div>' +
-      '<div class="v-stage"><svg class="v-ov" aria-hidden="true"></svg><div class="v-slots"></div></div>' +
+      '<div class="v-stage"></div>' +
       '<div class="v-chips"></div>' +
       '<div class="v-detail"></div>';
     this.headName = this.root.querySelector('.name');
@@ -192,11 +272,21 @@
     this.headCounter = this.root.querySelector('.counter');
     this.statusEl = this.root.querySelector('.v-status');
     this.stageEl = this.root.querySelector('.v-stage');
-    this.ovEl = this.root.querySelector('svg.v-ov');
-    this.slotsEl = this.root.querySelector('.v-slots');
     this.chipsEl = this.root.querySelector('.v-chips');
     this.detailEl = this.root.querySelector('.v-detail');
-    this.slots = buildSlots(this.slotsEl, (this.opts.input || lane.input || '').split(''));
+
+    var type = this.opts.type || lane.type || 'array';
+    this.renderer = RENDERERS[type] || RENDERERS.array;
+
+    function resolve(defaults, override) {
+      var v = (typeof override === 'function') ? override(lane) : override;
+      return (v === undefined || v === null || (Array.isArray(v) && !v.length)) ? defaults : v;
+    }
+    this.tokens = resolve(lane.tokens, this.opts.tokens);
+    this.rows = resolve(lane.rows, this.opts.rows);
+
+    this.renderer.build(this, lane, this.opts);
+
     this.headName.textContent = lane.name || '';
     this.headBadge.textContent = lane.badge || '';
     this.headBadge.className = 'badge' + (lane.variant && lane.variant !== 'neutral' ? ' ' + lane.variant : '');
@@ -207,7 +297,7 @@
     this.idx = Math.max(0, Math.min(i, this.frames.length - 1));
     var frame = this.frames[this.idx];
     var prev = this.idx > 0 ? this.frames[this.idx - 1] : null;
-    paintBoxes(this.slots, frame, this.slots.length);
+    this.renderer.update(this, frame, prev);
 
     clear(this.statusEl);
     var statusEl = this.statusEl;
@@ -217,12 +307,15 @@
       s.appendChild(el('span', 'v', v));
       statusEl.appendChild(s);
     }
-    stat('i', '= ' + frame.i);
+    if (frame.i !== undefined && frame.i !== null) stat('i', '= ' + frame.i);
     if (frame.j !== undefined && frame.j !== null) stat('j', '= ' + frame.j);
     if (frame.window) {
-      var txt = (this.opts.input || this.lane.input || '').slice(frame.window[0], frame.window[1] + 1);
-      stat('窗口', '[' + frame.window[0] + ', ' + frame.window[1] + '] = "' + txt + '"');
+      var toks = this.tokens || (this.lane.input || '').split('');
+      var txt = toks.slice(frame.window[0], frame.window[1] + 1).join(' ');
+      stat('区间', '[' + frame.window[0] + ', ' + frame.window[1] + '] = ' + txt);
     }
+    if (frame.col !== undefined && frame.col !== null) stat('列', '= ' + frame.col + '（从右数）');
+    if (frame.digit !== undefined && frame.digit !== null) stat('本位', '= ' + frame.digit);
     renderVars(this.chipsEl, frame.vars);
 
     clear(this.detailEl);
@@ -230,11 +323,12 @@
     if (frame.note) this.detailEl.appendChild(el('span', 'v-note', '  ' + frame.note));
 
     this.headCounter.innerHTML = '第 <b>' + (this.idx + 1) + '</b> / ' + this.frames.length + ' 帧';
-    drawOverlay(this.stageEl, this.ovEl, this.slots, frame, prev);
     return frame;
   };
 
-  /* ---------------- 播放器（可管理多条轨道） ---------------- */
+  /* ==================================================================
+     播放器
+     ================================================================== */
 
   function Player(container, lanes, opts) {
     this.opts = opts || {};
@@ -319,7 +413,9 @@
     }
   };
 
-  /* ---------------- 代码标签页 ---------------- */
+  /* ==================================================================
+     代码标签页
+     ================================================================== */
 
   function initTabs() {
     var wrap = document.querySelector('[data-tabs]');
@@ -339,7 +435,9 @@
     });
   }
 
-  /* ---------------- 启动 ---------------- */
+  /* ==================================================================
+     启动
+     ================================================================== */
 
   function boot() {
     initTabs();
@@ -358,10 +456,11 @@
     host.appendChild(main);
     var mainPlayer = new Player(main, [lanes[0]], {
       title: (lanes[0].name || '') + ' · 逐步演示',
-      interval: 850
+      interval: 850,
+      laneOpts: { type: data.type }
     });
 
-    // 代码面板（挂在主轨道下方）
+    // 代码面板
     if (lanes[0].showCode && lanes[0].codeLines && lanes[0].codeLines.length) {
       var codeCard = el('div', 'card');
       codeCard.style.marginTop = '14px';
@@ -389,7 +488,7 @@
       sync();
     }
 
-    // 横向对比：所有轨道并行
+    // 横向对比
     if (lanes.length > 1) {
       var cmpCard = el('div', 'card');
       cmpCard.style.marginTop = '16px';
@@ -400,8 +499,10 @@
         showResult: true,
         laneOpts: {
           compact: true,
-          input: (lanes[0].compareInput || lanes[0].input),
-          frames: function (lane) { return lane.compareFrames || lane.frames; }
+          type: data.type,
+          frames: function (lane) { return lane.compareFrames || lane.frames; },
+          tokens: function (lane) { return lane.compareTokens; },
+          rows: function (lane) { return lane.compareRows; }
         }
       });
     }

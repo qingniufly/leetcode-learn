@@ -10,9 +10,13 @@
 
 ```
 .
-├── code/            # 解题程序（按题号命名），自带自测
+├── code/            # 解题程序（按题号命名），自带自测与动画轨迹
+│   ├── 0001_two_sum.py
+│   ├── 0002_add_two_numbers.py
 │   └── 0003_longest_substring_without_repeating_characters.py
 ├── problems/        # ← 每道题一份配置，加新题的主要入口
+│   ├── 0001-two-sum.json
+│   ├── 0002-add-two-numbers.json
 │   └── 0003-longest-substring.json
 ├── tools/
 │   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
@@ -44,9 +48,11 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
 ```jsonc
 {
   "i": 2,                       // 当前指针位置
-  "j": 2,                       // 窗口左端
-  "window": [2, 2],             // 当前窗口区间
-  "dropped": [0, 1],            // 这一步被丢弃的下标
+  "j": 2,                       // 次指针（可选）
+  "window": [2, 2],             // 当前区间（可选，会画托架）
+  "bracketLabels": ["i", "j"],  // 可选：托架两端的标注
+  "marks": [0, 1],              // 可选：需要特别标记的下标（如找到的答案对）
+  "dropped": [0, 1],            // 可选：这一步被丢弃的下标
   "jump":  { "from": 0, "to": 2, "label": "start 0 → 2" },  // 可选：左端向前跳
   "backLabel": "回退重扫",       // 可选：指针向后回退时的标注
   "label": "这一步发生了什么",     // 说明文字
@@ -55,6 +61,18 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
   "vars": { "last": {"a": 0}, "maxLen": 2 }  // 状态面板显示的变量
 }
 ```
+
+### 可视化类型（`demo.type`）
+
+播放器把「怎么画」和「画什么」分开了，页面里没有一行题目专属代码：
+
+| type | 画法 | 适合 | 已用于 |
+| --- | --- | --- | --- |
+| `array` | 一排 token + 当前指针 + 可选区间 / 配对高亮 | 滑动窗口、双指针、哈希表遍历、数组扫描 | 第 1、3 题 |
+| `digits` | 两行数字 + 进位箭头 + 结果逐位生成 | 竖式加法 | 第 2 题 |
+
+新增一种画法 = 在 `docs/assets/site.js` 的 `RENDERERS` 里注册一个渲染函数，
+再把题目配置里的 `demo.type` 指过去。
 
 ---
 
@@ -102,15 +120,19 @@ def trace(s: str):
   "snippets": ["Solution"],                 // 要在页面上展示的 class
   "complexity": [["写法", "时间", "空间"], ["双指针", "O(n)", "O(1)"]],
   "demo": {
-    "type": "window",
-    "input": "[1,8,6,2,5,4,8,3,7]",         // 逐步演示用的输入
-    "compareInput": "...",                  // 可选：横向对比用的输入
+    "type": "array",                        // 用哪种画法：array / digits
+    "args": [[1, 8, 6, 2], 9],              // 传给轨迹函数的参数（任意个数）
+    "compareArgs": [[...], 9],              // 可选：横向对比用的另一组参数
     "lanes": [                              // 一条轨道 = 一种写法
       { "name": "双指针版", "badge": "O(n)", "variant": "good",
         "code": "Solution", "trace": "trace", "showCode": true }
     ]
   }
 }
+```
+
+> `args` 就是传给 Python 轨迹函数的实参，轨迹函数返回什么，页面上就画什么。
+> 页面上的元素（方块里的数字、竖式加法的两行）会**自动从 `args` 推导**，不用重复写。
 ```
 
 > `lanes` 有 **2 条以上**时，页面会自动多出一个「横向对比」区块，把它们并排播放，
@@ -129,9 +151,11 @@ cd docs && python3 -m http.server 8000
 
 ## 题目列表
 
-| # | 题目 | 难度 | 核心解法 | 标签 |
+| # | 题目 | 难度 | 核心解法 | 可视化 |
 | --- | --- | --- | --- | --- |
-| 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | 滑动窗口 / 哈希表 / 双指针 |
+| 1 | 两数之和 | 简单 | 哈希表一次遍历 | `array` + 配对高亮 |
+| 2 | 两数相加 | 中等 | 链表模拟竖式加法 | `digits` 竖式加法 |
+| 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | `array` + 区间托架 |
 
 🌐 [在线阅读](https://qingniufly.github.io/leetcode-learn/)
 
