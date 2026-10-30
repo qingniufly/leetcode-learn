@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LeetCode 3 · 无重复字符的最长子串</title>
+<meta name="description" content="滑动窗口 + 字典记录上次出现位置：一步步看懂 LeetCode 3 的 O(n) 解法，并对比会超时的 O(n²) 写法。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230969da%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2719%27 font-family=%27monospace%27 font-weight=%27bold%27 fill=%27white%27 text-anchor=%27middle%27%3E3%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">LeetCode 3 · Longest Substring Without Repeating Characters</p>
+    <h1>无重复字符的最长子串</h1>
+    <p class="lede">
+      滑动窗口 + 字典。左指针只在必要时「跳」到冲突字符之后，绝不用一格一格挪回去 —— 这一个差别，
+      就是 O(n) 与 O(n²) 的分界线。
+    </p>
+    <nav class="jump">
+      <a href="#explain">逐步演示</a>
+      <a href="#compare">复杂度对比</a>
+      <a href="#code">完整代码</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 逐步演示 ============ -->
+  <section id="explain">
+    <div class="sec-head">
+      <h2>逐步演示：窗口是怎么滑的</h2>
+      <p>示例串 <code>abba</code>（答案 2）。点「下一步」或「自动播放」，看 <code>start</code> 的每一次移动。</p>
+    </div>
+
+    <div class="card">
+      <div class="v-bar">
+        <span class="v-title">滑动窗口 · 字典记录上次出现位置</span>
+        <span class="v-pos" id="ex-pos"></span>
+        <div class="v-btns">
+          <button type="button" class="v-btn" id="ex-prev">上一步</button>
+          <button type="button" class="v-btn primary" id="ex-next">下一步</button>
+          <button type="button" class="v-btn" id="ex-play">自动播放</button>
+          <button type="button" class="v-btn" id="ex-reset">重置</button>
+        </div>
+      </div>
+
+      <div class="v-status" id="ex-status"></div>
+
+      <div class="v-stage" id="ex-stage">
+        <svg class="v-ov" id="ex-ov" aria-hidden="true"></svg>
+        <div class="v-slots" id="ex-slots"></div>
+      </div>
+
+      <div class="v-chips" id="ex-chips"></div>
+
+      <pre class="v-code" id="ex-code" aria-label="算法代码"></pre>
+
+      <div class="v-detail" id="ex-detail"></div>
+    </div>
+
+    <div class="note">
+      <b>最容易写错的一行：</b><code>if ch in last and last[ch] &gt;= start</code>。
+      第四步里 <code>'a'</code> 上次出现在下标 0，但那时 <code>start</code> 已经跳到 2，位置 0 早已被滑出窗口。
+      若此时还执行 <code>start = last['a'] + 1</code>，左端就会倒退，窗口变成 <code>"aba"</code>，
+      把早已淘汰的重复字符又请回来，答案会错成 3。
+    </div>
+  </section>
+
+  <!-- ============ 复杂度对比 ============ -->
+  <section id="compare">
+    <div class="sec-head">
+      <h2>复杂度对比：为什么「只回退一格」会超时</h2>
+      <p>同一个最坏用例，两种写法并行跑一遍。注意看第一行指针的<b>回退</b>。</p>
+    </div>
+
+    <div class="card">
+      <div class="v-bar">
+        <span class="v-title">最坏用例：<code id="cmp-input"></code></span>
+        <div class="v-btns">
+          <button type="button" class="v-btn primary" id="cmp-play">播放</button>
+          <button type="button" class="v-btn" id="cmp-step">单步</button>
+          <button type="button" class="v-btn" id="cmp-reset">重置</button>
+        </div>
+      </div>
+
+      <div class="cmp-row">
+        <div class="cmp-head">
+          <span class="name">重启版</span>
+          <span class="badge warn">左端只回退一格 → O(n²)</span>
+          <span class="counter">已扫描 <b id="cmp-a-ops">0</b> 次</span>
+        </div>
+        <div class="cmp-stage" id="cmp-a-stage">
+          <svg class="v-ov" id="cmp-a-ov" aria-hidden="true"></svg>
+          <div class="v-slots" id="cmp-a-slots"></div>
+        </div>
+        <div class="cmp-note" id="cmp-a-note"></div>
+      </div>
+
+      <div class="cmp-row">
+        <div class="cmp-head">
+          <span class="name">字典版</span>
+          <span class="badge good">左端直接跳到冲突字符之后 → O(n)</span>
+          <span class="counter">已扫描 <b id="cmp-b-ops">0</b> 次</span>
+        </div>
+        <div class="cmp-stage" id="cmp-b-stage">
+          <svg class="v-ov" id="cmp-b-ov" aria-hidden="true"></svg>
+          <div class="v-slots" id="cmp-b-slots"></div>
+        </div>
+        <div class="cmp-note" id="cmp-b-note"></div>
+      </div>
+
+      <div class="cmp-result" id="cmp-result"></div>
+    </div>
+
+    <div class="note">
+      <b>为什么会这样：</b>重启版一旦发现重复，就把左端挪一格再把整段重扫一遍，于是同一段前缀被反复确认；
+      字典版则把左端直接送到冲突字符的下一个位置，同一段前缀<b>永远只扫一次</b>。
+      串长 n 时，重启版的内层循环会执行约 n(n+1)/2 次，字典版恒为 n 次。
+    </div>
+  </section>
+
+  <!-- ============ 完整代码 ============ -->
+  <section id="code">
+    <div class="sec-head">
+      <h2>完整代码</h2>
+      <p>仓库里还带了一份自测脚本，随机对拍 + 最坏用例计时。</p>
+    </div>
+
+    <div class="tabs" role="tablist" id="code-tabs">
+      <button type="button" role="tab" aria-selected="true" data-tab="opt">字典版（推荐提交）</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="set">双指针 + 集合</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="restart">重启版（会超时）</button>
+    </div>
+
+    <pre class="src" id="code-body"></pre>
+
+    <div style="margin-top:18px">
+      <table class="cmp">
+        <thead>
+          <tr><th>写法</th><th>时间复杂度</th><th>空间复杂度</th><th>可提交</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>字典版</td><td class="num">O(n)</td><td class="num">O(min(n, |Σ|))</td><td>✅</td></tr>
+          <tr><td>双指针 + 集合</td><td class="num">O(n)</td><td class="num">O(min(n, |Σ|))</td><td>✅</td></tr>
+          <tr><td>重启版</td><td class="num">O(n²)</td><td class="num">O(min(n, |Σ|))</td><td>❌ n=5×10⁴ 时约 100 秒</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>本页由 <a href="https://github.com/qingniufly/leetcode-learn">qingniufly/leetcode-learn</a> 驱动 · 代码见 <code>code/</code> 目录</p>
+  </footer>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
