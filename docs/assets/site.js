@@ -414,6 +414,81 @@
   };
 
   /* ==================================================================
+     目录页：按标签筛选
+     ================================================================== */
+
+  function initFilter() {
+    var bar = document.querySelector('[data-tag-filter]');
+    if (!bar) return;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.pcard'));
+    var buttons = Array.prototype.slice.call(bar.querySelectorAll('.tag-btn'));
+    var countEl = document.querySelector('[data-filter-count]');
+    var listCountEl = document.querySelector('[data-list-count]');
+    var total = cards.length;
+
+    function apply(tag, pushHash) {
+      var shown = 0;
+      cards.forEach(function (c) {
+        var tags = (c.getAttribute('data-tags') || '').split('|');
+        var match = !tag || tags.indexOf(tag) >= 0;
+        c.hidden = !match;
+        if (match) shown++;
+      });
+      buttons.forEach(function (b) {
+        var on = (b.getAttribute('data-tag') || '') === (tag || '');
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      if (countEl) {
+        countEl.textContent = shown === total
+          ? ''
+          : ('已筛选 ' + shown + ' / ' + total + ' 题');
+      }
+      if (listCountEl) {
+        listCountEl.textContent = shown === total ? ('（' + total + '）') : ('（' + shown + ' / ' + total + '）');
+      }
+      if (pushHash) {
+        var hash = tag ? ('#tag=' + encodeURIComponent(tag)) : '';
+        if (location.hash !== hash) {
+          if (hash) { history.replaceState(null, '', hash); }
+          else { history.replaceState(null, '', location.pathname + location.search); }
+        }
+      }
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var tag = b.getAttribute('data-tag') || '';
+        // 再点一次当前选中的标签就取消筛选
+        var current = buttons.filter(function (o) { return o.classList.contains('is-active'); })[0];
+        var cur = current ? (current.getAttribute('data-tag') || '') : '';
+        apply(tag === cur && tag ? '' : tag, true);
+      });
+    });
+
+    // 卡片里的标签也可以点（它是 <a> 里的 span，所以要阻止默认跳转）
+    Array.prototype.forEach.call(document.querySelectorAll('.pcard .tag-card'), function (t) {
+      t.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        apply(t.getAttribute('data-tag') || '', true);
+      });
+    });
+
+    // 支持分享链接：#tag=xxx
+    var m = /^#tag=(.+)$/.exec(location.hash);
+    if (m) {
+      var tag = decodeURIComponent(m[1]);
+      var known = buttons.some(function (b) { return (b.getAttribute('data-tag') || '') === tag; });
+      if (known) apply(tag, false);
+    }
+    window.addEventListener('hashchange', function () {
+      var mm = /^#tag=(.+)$/.exec(location.hash);
+      apply(mm ? decodeURIComponent(mm[1]) : '', false);
+    });
+  }
+
+  /* ==================================================================
      代码标签页
      ================================================================== */
 
@@ -441,6 +516,7 @@
 
   function boot() {
     initTabs();
+    initFilter();
     var dataEl = document.getElementById('problem-data');
     var host = document.getElementById('player');
     if (!dataEl || !host) return;

@@ -351,8 +351,12 @@ def difficulty_class(difficulty: str) -> str:
                                   str(difficulty).strip().lower() or "none")
 
 
-def render_tags(tags: list) -> str:
-    return "".join('<span class="tag">%s</span>' % html.escape(t) for t in tags)
+def render_tags(tags: list, clickable: bool = False) -> str:
+    cls = "tag tag-card" if clickable else "tag"
+    return "".join(
+        '<span class="%s" data-tag="%s">%s</span>' % (cls, html.escape(t), html.escape(t))
+        for t in tags
+    )
 
 
 def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: dict | None) -> str:
@@ -419,8 +423,9 @@ def render_index_page(problems: list[dict]) -> str:
     cards = []
     for problem in problems:
         meta = problem["meta"]
+        tags = meta.get("tags", [])
         cards.append(
-            '<a class="pcard" href="problems/%s.html">'
+            '<a class="pcard" href="problems/%s.html" data-tags="%s">'
             '<span class="pcard-id">%s</span>'
             '<span class="pcard-title">%s</span>'
             '<span class="pcard-en">%s</span>'
@@ -432,12 +437,13 @@ def render_index_page(problems: list[dict]) -> str:
             "</a>"
             % (
                 html.escape(meta["slug"]),
+                html.escape("|".join(tags)),
                 html.escape(meta["id"]),
                 html.escape(meta["title"]),
                 html.escape(meta.get("title_en", "")),
                 difficulty_class(meta.get("difficulty", "")),
                 html.escape(meta.get("difficulty", "")),
-                render_tags(meta.get("tags", [])),
+                render_tags(meta.get("tags", []), clickable=True),
                 md_inline(meta.get("summary", "")),
             )
         )
@@ -446,9 +452,16 @@ def render_index_page(problems: list[dict]) -> str:
     for problem in problems:
         for tag in problem["meta"].get("tags", []):
             tag_counter[tag] = tag_counter.get(tag, 0) + 1
-    tag_cloud = "".join(
-        '<span class="tag">%s <b>%d</b></span>' % (html.escape(t), c)
-        for t, c in sorted(tag_counter.items(), key=lambda kv: (-kv[1], kv[0]))
+    tag_cloud = (
+        '<div class="tagbar" data-tag-filter role="group" aria-label="按标签筛选题目">'
+        '<button type="button" class="tag tag-btn is-active" data-tag="" aria-pressed="true">'
+        '全部 <b>%d</b></button>' % len(problems)
+        + "".join(
+            '<button type="button" class="tag tag-btn" data-tag="%s" aria-pressed="false">%s <b>%d</b></button>'
+            % (html.escape(t), html.escape(t), c)
+            for t, c in sorted(tag_counter.items(), key=lambda kv: (-kv[1], kv[0]))
+        )
+        + '</div><span class="filter-count" data-filter-count role="status" aria-live="polite"></span>'
     )
 
     return fill(read(TEMPLATE_INDEX), {
