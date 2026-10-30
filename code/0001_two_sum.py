@@ -92,3 +92,63 @@ def trace_brute(nums, target):
             }
             if hit:
                 return
+
+
+def _self_test() -> None:
+    import random
+    random.seed(0)
+
+    def brute(nums, target):
+        for i in range(len(nums)):
+            for j in range(i + 1, len(nums)):
+                if nums[i] + nums[j] == target:
+                    return [i, j]
+        return []
+
+    def valid(nums, target, pair):
+        """题目只要求「存在一组解」，具体是哪一组都可以。"""
+        return (isinstance(pair, list) and len(pair) == 2 and pair[0] != pair[1]
+                and 0 <= pair[0] < len(nums) and 0 <= pair[1] < len(nums)
+                and nums[pair[0]] + nums[pair[1]] == target)
+
+    cases = [[], [1], [2, 7], [3, 3], [3, 2, 4], [1, 2, 3, 4, 5], [0, 4, 3, 0],
+             [-1, -2, -3, -4, -5], [5, 5, 5]]
+    targets = [0, 5, 6, 9, 10, -7]
+    for nums in cases:
+        for target in targets:
+            expected = brute(nums, target)
+            for sol in (Solution(), SolutionBruteForce()):
+                got = sol.twoSum(nums, target)
+                if expected:
+                    assert valid(nums, target, got), \
+                        "nums=%r target=%r 得到 %r，不是合法解" % (nums, target, got)
+                else:
+                    assert got == [], "nums=%r target=%r 本应无解，却得到 %r" % (nums, target, got)
+    print("[ok] %d 组边界用例全部通过" % (len(cases) * len(targets)))
+
+    for _ in range(3000):
+        nums = [random.randint(-20, 20) for _ in range(random.randint(0, 8))]
+        target = random.randint(-20, 20)
+        expected = brute(nums, target)
+        for sol in (Solution(), SolutionBruteForce()):
+            got = sol.twoSum(nums, target)
+            if expected:
+                assert valid(nums, target, got), \
+                    "nums=%r target=%r 得到 %r，不是合法解" % (nums, target, got)
+            else:
+                assert got == [], "nums=%r target=%r 本应无解，却得到 %r" % (nums, target, got)
+    print("[ok] 3000 组随机用例与暴力解结果一致")
+
+    # 动图轨迹的终点必须和解题程序的输出一致（图和代码不能对不上）
+    for _ in range(300):
+        nums = [random.randint(-20, 20) for _ in range(random.randint(2, 8))]
+        target = random.randint(-20, 20)
+        frames = list(trace(nums, target))
+        assert frames[-1].get("marks") == Solution().twoSum(nums, target), \
+            "动图终点 %r 与代码答案 %r 不一致" % (frames[-1].get("marks"),
+                                                  Solution().twoSum(nums, target))
+    print("[ok] 300 组随机用例中，动图轨迹终点与代码答案一致")
+
+
+if __name__ == "__main__":
+    _self_test()

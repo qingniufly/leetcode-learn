@@ -111,3 +111,69 @@ def trace(l1, l2):
         }
         i += 1
         j += 1
+
+
+def _self_test() -> None:
+    import random
+    random.seed(0)
+
+    def build(vals):
+        head = None
+        for v in reversed(vals):
+            head = ListNode(v, head)
+        return head
+
+    def flat(node):
+        out = []
+        while node:
+            out.append(node.val)
+            node = node.next
+        return out
+
+    def to_num(a):
+        return int("".join(map(str, reversed(a)))) if a else 0
+
+    def brute(a, b):
+        s = str(to_num(a) + to_num(b))
+        return [int(c) for c in reversed(s)]
+
+    # 注：LeetCode 约束保证两条链表都非空，且数字没有前导零（0 本身除外）
+    cases = [([0], [0]), ([1, 2], [3, 4]), ([9, 9, 9], [1]), ([5], [5]),
+             ([1, 2], [0, 3]), ([1], [9, 9, 9, 9, 9, 9, 9]), ([7, 0, 8], [8, 0, 7])]
+    for a, b in cases:
+        expected = brute(a, b)
+        for sol in (Solution(), SolutionAsList()):
+            got = flat(sol.addTwoNumbers(build(a), build(b)))
+            assert got == expected, "a=%r b=%r 得到 %r，期望 %r" % (a, b, got, expected)
+    print("[ok] %d 组边界用例全部通过" % len(cases))
+
+    def rand_chain(max_len):
+        """随机生成一条合法的链表：无前导零（最高位非零，0 本身除外）。"""
+        n = random.randint(1, max_len)
+        digits = [random.randint(0, 9) for _ in range(n)]
+        if n > 1 and digits[-1] == 0:
+            digits[-1] = random.randint(1, 9)
+        return digits
+
+    for _ in range(2000):
+        a = rand_chain(6)
+        b = rand_chain(6)
+        expected = brute(a, b)
+        for sol in (Solution(), SolutionAsList()):
+            got = flat(sol.addTwoNumbers(build(a), build(b)))
+            assert got == expected, "a=%r b=%r 得到 %r，期望 %r" % (a, b, got, expected)
+    print("[ok] 2000 组随机用例结果一致")
+
+    # 动图轨迹的终点必须和解题程序的输出一致（图和代码不能对不上）
+    for _ in range(300):
+        a = rand_chain(6)
+        b = rand_chain(6)
+        frames = list(trace(a, b))
+        # trace 的 result 与 brute 都是「低位在前」，直接比
+        assert frames[-1]["result"] == brute(a, b), \
+            "动图终点 %r 与代码答案 %r 不一致" % (frames[-1]["result"], brute(a, b))
+    print("[ok] 300 组随机用例中，动图轨迹终点与代码答案一致")
+
+
+if __name__ == "__main__":
+    _self_test()
