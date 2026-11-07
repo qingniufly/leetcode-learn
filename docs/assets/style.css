@@ -373,3 +373,29 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
 .tri { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .tri-row { display: flex; justify-content: center; gap: 5px; }
 .tri-row .cell { min-width: 42px; }
+
+/* ---------------- 路径计数图表（组合数 ↔ 杨辉三角） ---------------- */
+
+.pf { position: relative; }
+.pf-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pf-cell {
+  fill: var(--muted); stroke: var(--border); stroke-width: 1; cursor: pointer;
+  transition: fill .15s ease, stroke .15s ease;
+}
+.pf-cell:hover { stroke: var(--accent); }
+.pf-cell.is-sel {
+  fill: color-mix(in srgb, var(--viz-series-1) 26%, transparent);
+  stroke: var(--viz-series-1); stroke-width: 2;
+}
+.pf-num {
+  fill: var(--foreground); font-family: var(--font-mono); font-size: 13px;
+  text-anchor: middle; dominant-baseline: central; pointer-events: none;
+}
+.pf-num.is-sel { font-weight: 700; }
+.pf-path {
+  fill: none; stroke: var(--viz-series-2); stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round; opacity: .75;
+}
+.pf-detail { margin-top: 12px; font-size: var(--font-size-base, 14px); }
+.pf-detail b { font-family: var(--font-mono); }
+.pf-text { margin-top: 14px; }

@@ -351,6 +351,34 @@ def difficulty_class(difficulty: str) -> str:
                                   str(difficulty).strip().lower() or "none")
 
 
+def render_path_figure(fig: dict) -> str:
+    """「杨辉三角 = 路径计数」交互图：点格子看通往它的所有路径。"""
+    if not fig:
+        return ""
+    rows = int(fig.get("rows", 6))
+    title = html.escape(fig.get("title", ""))
+    hint = html.escape(fig.get("hint", ""))
+    text = render_md(fig.get("text", ""))
+    body = ""
+    if text:
+        body = '<div class="card md pf-text">%s</div>' % text
+    return (
+        '<section id="why-combination">'
+        '<div class="sec-head"><h2>%s</h2><p>%s</p></div>'
+        '<div class="card">'
+        '<div class="v-bar">'
+        '<span class="text-small text-muted">%s</span>'
+        '</div>'
+        '<div class="pf" data-path-figure data-rows="%d">'
+        '<svg class="pf-svg" role="img" aria-label="杨辉三角与通往所选格子的全部路径"></svg>'
+        '<div class="pf-detail"></div>'
+        '</div>'
+        '</div>'
+        '%s'
+        '</section>'
+    ) % (title, html.escape(fig.get("subtitle", "")) or hint, hint, rows, body)
+
+
 def render_tags(tags: list, clickable: bool = False) -> str:
     cls = "tag tag-card" if clickable else "tag"
     return "".join(
@@ -385,6 +413,8 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
     else:
         nav.append('<span></span>')
 
+    figure_section = render_path_figure(meta.get("pathFigure"))
+
     notes_section = ""
     if meta.get("notes"):
         notes_section = (
@@ -403,6 +433,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         "ID": html.escape(meta["id"]),
         "DIFFICULTY_CLASS": difficulty_class(meta.get("difficulty", "")),
         "NOTES_SECTION": notes_section,
+        "FIGURE_SECTION": figure_section,
         "COMPLEXITY_SECTION": complexity_section,
         "TITLE": html.escape(meta["title"]),
         "TITLE_EN": html.escape(meta.get("title_en", "")),

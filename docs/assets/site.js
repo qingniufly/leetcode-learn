@@ -588,6 +588,119 @@
   }
 
   /* ==================================================================
+     「杨辉三角 = 路径计数」交互图
+     点任意一格，画出通往它的所有路径 —— 路径条数正好是 C(i, j)。
+     ================================================================== */
+
+  function initPathFigure() {
+    var host = document.querySelector('[data-path-figure]');
+    if (!host) return;
+    var svg = host.querySelector('.pf-svg');
+    var detail = host.querySelector('.pf-detail');
+    var ROWS = parseInt(host.getAttribute('data-rows'), 10) || 6;
+    var sel = { r: Math.min(4, ROWS - 1), c: 2 };
+    if (sel.c > sel.r) sel.c = sel.r;
+
+    function comb(n, k) {
+      if (k < 0 || k > n) return 0;
+      var v = 1;
+      for (var i = 0; i < k; i++) v = v * (n - i) / (i + 1);
+      return Math.round(v);
+    }
+    function triangle() {
+      var t = [[1]];
+      for (var r = 1; r < ROWS; r++) {
+        var prev = t[r - 1], cur = [1];
+        for (var j = 1; j < prev.length; j++) cur.push(prev[j - 1] + prev[j]);
+        cur.push(1);
+        t.push(cur);
+      }
+      return t;
+    }
+    function pathsTo(R, C) {
+      var out = [];
+      (function walk(r, c, path) {
+        if (r === R) { if (c === C) out.push(path); return; }
+        var needRight = C - c;
+        var needLeft = (R - r) - needRight;
+        if (needLeft > 0) walk(r + 1, c, path.concat([[r + 1, c]]));
+        if (needRight > 0) walk(r + 1, c + 1, path.concat([[r + 1, c + 1]]));
+      })(0, 0, [[0, 0]]);
+      return out;
+    }
+
+    var TABLE = triangle();
+
+    function draw() {
+      var W = host.clientWidth || 640;
+      var cellW = 46, gap = 8, rowH = 44, top = 10;
+      var unit = cellW + gap;
+      var H = top + ROWS * rowH + 8;
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      svg.setAttribute('width', W);
+      svg.setAttribute('height', H);
+      clear(svg);
+
+      function cx(r, c) { return W / 2 + (c - r / 2) * unit; }
+      function cy(r) { return top + r * rowH + rowH / 2; }
+
+      var paths = pathsTo(sel.r, sel.c);
+      var m = paths.length;
+      var vx = cx(sel.r, sel.c) - cx(0, 0), vy = cy(sel.r) - cy(0);
+      var len = Math.sqrt(vx * vx + vy * vy) || 1;
+      var px = -vy / len, py = vx / len;
+
+      paths.forEach(function (path, idx) {
+        var off = (idx - (m - 1) / 2) * 1.6;
+        var pts = path.map(function (p) {
+          return (cx(p[0], p[1]) + px * off).toFixed(1) + ',' + (cy(p[0]) + py * off).toFixed(1);
+        }).join(' ');
+        ovLine(pts);
+      });
+
+      TABLE.forEach(function (row, r) {
+        row.forEach(function (v, c) {
+          var isSel = (r === sel.r && c === sel.c);
+          var g = svgEl('g', {});
+          var rect = svgEl('rect', {
+            x: cx(r, c) - cellW / 2, y: cy(r) - rowH / 2 + 4,
+            width: cellW, height: rowH - 8, rx: 6,
+            class: 'pf-cell' + (isSel ? ' is-sel' : '')
+          });
+          rect.addEventListener('click', function () { sel = { r: r, c: c }; draw(); });
+          var title = svgEl('title', {});
+          title.textContent = '第 ' + r + ' 行第 ' + c + ' 列 = ' + v + ' = C(' + r + ',' + c + ')';
+          rect.appendChild(title);
+          g.appendChild(rect);
+          var t = svgEl('text', { x: cx(r, c), y: cy(r), class: 'pf-num' + (isSel ? ' is-sel' : '') });
+          t.textContent = v;
+          g.appendChild(t);
+          svg.appendChild(g);
+        });
+      });
+
+      svg.setAttribute('aria-label',
+        '杨辉三角共 ' + ROWS + ' 行。选中第 ' + sel.r + ' 行第 ' + sel.c + ' 列，值为 ' +
+        TABLE[sel.r][sel.c] + '，等于 C(' + sel.r + ',' + sel.c + ')，通往它共有 ' + m + ' 条路径。');
+
+      clear(detail);
+      var sp = el('span');
+      sp.innerHTML = '到第 <b>' + sel.r + '</b> 行第 <b>' + sel.c + '</b> 格要走 <b>' + sel.r +
+        '</b> 步，其中 <b>' + sel.c + '</b> 步向右 —— 从 ' + sel.r + ' 个位置里选 ' + sel.c +
+        ' 个放「向右」，共 <b>' + m + '</b> 种选法，正是 <b>C(' + sel.r + ',' + sel.c + ') = ' +
+        comb(sel.r, sel.c) + '</b>，也正是这个格子里写的数 ' + TABLE[sel.r][sel.c] + '。';
+      detail.appendChild(sp);
+    }
+
+    function ovLine(points) {
+      svg.appendChild(svgEl('polyline', { points: points, class: 'pf-path' }));
+    }
+
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(draw).observe(host);
+  }
+
+  /* ==================================================================
      代码标签页
      ================================================================== */
 
@@ -616,6 +729,7 @@
   function boot() {
     initTabs();
     initFilter();
+    initPathFigure();
     var dataEl = document.getElementById('problem-data');
     var host = document.getElementById('player');
     if (!dataEl || !host) return;
