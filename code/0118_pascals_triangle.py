@@ -54,6 +54,7 @@ class SolutionByFormula:
 
     def generate(self, numRows: int) -> list[list[int]]:
         from math import comb
+        # 最精简写法：result = [[comb(i, j) for j in range(i + 1)] for i in range(numRows)]
         result = []
         for i in range(numRows):
             result.append([comb(i, k) for k in range(i + 1)])
