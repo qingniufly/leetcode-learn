@@ -341,3 +341,28 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
 
 .tag-card { cursor: pointer; transition: border-color .15s ease, color .15s ease; }
 .tag-card:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------------- cells 渲染器：DP 表格 / 调用序列 ---------------- */
+
+.stage-cells { padding-top: 48px; }
+.cells { position: relative; display: flex; gap: 5px; row-gap: 30px; flex-wrap: wrap; align-items: flex-end; }
+.cell {
+  position: relative; min-width: 38px; padding: 7px 9px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--muted); color: var(--foreground);
+  font-size: 12.5px; font-family: var(--font-mono); font-weight: 600; text-align: center;
+  transition: background .18s ease, border-color .18s ease, border-width .18s ease;
+}
+.cell.is-from {
+  background: color-mix(in srgb, var(--viz-series-3) 22%, transparent);
+  border-color: var(--viz-series-3);
+}
+.cell.is-cur {
+  background: color-mix(in srgb, var(--viz-series-1) 26%, transparent);
+  border-color: var(--viz-series-1); border-width: 2px;
+}
+.cell-cap-layer { position: absolute; left: 0; top: 0; right: 0; height: 0; pointer-events: none; }
+.cell-cap {
+  position: absolute; white-space: nowrap; font-size: 11.5px; font-weight: 600; color: var(--foreground);
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 3px 9px; box-shadow: var(--shadow); font-family: var(--font-mono);
+}

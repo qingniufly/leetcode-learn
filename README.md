@@ -13,11 +13,13 @@
 ├── code/            # 解题程序（按题号命名），自带自测与动画轨迹
 │   ├── 0001_two_sum.py
 │   ├── 0002_add_two_numbers.py
-│   └── 0003_longest_substring_without_repeating_characters.py
+│   ├── 0003_longest_substring_without_repeating_characters.py
+│   └── 0070_climbing_stairs.py
 ├── problems/        # ← 每道题一份配置，加新题的主要入口
 │   ├── 0001-two-sum.json
 │   ├── 0002-add-two-numbers.json
-│   └── 0003-longest-substring.json
+│   ├── 0003-longest-substring.json
+│   └── 0070-climbing-stairs.json
 ├── tools/
 │   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
 ├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
@@ -70,6 +72,7 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
 | --- | --- | --- | --- |
 | `array` | 一排 token + 当前指针 + 可选区间 / 配对高亮 | 滑动窗口、双指针、哈希表遍历、数组扫描 | 第 1、3 题 |
 | `digits` | 两行数字 + 进位箭头 + 结果逐位生成 | 竖式加法 | 第 2 题 |
+| `cells` | 一排表格单元 + 来源格高亮 + 浮标公式 | 动态规划表格、递归调用序列 | 第 70 题 |
 
 新增一种画法 = 在 `docs/assets/site.js` 的 `RENDERERS` 里注册一个渲染函数，
 再把题目配置里的 `demo.type` 指过去。
@@ -156,6 +159,7 @@ cd docs && python3 -m http.server 8000
 | 1 | 两数之和 | 简单 | 哈希表一次遍历 | `array` + 配对高亮 |
 | 2 | 两数相加 | 中等 | 链表模拟竖式加法 | `digits` 竖式加法 |
 | 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | `array` + 区间托架 |
+| 70 | 爬楼梯 | 简单 | 动态规划 / 斐波那契（滚动变量） | `cells` + DP 表格 |
 
 🌐 [在线阅读](https://qingniufly.github.io/leetcode-learn/)
 

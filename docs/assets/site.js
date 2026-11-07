@@ -175,6 +175,12 @@
   };
 
   RENDERERS.digits = {
+    status: function (frame) {
+      var out = [];
+      if (frame.col !== undefined && frame.col !== null) out.push(['列', '= ' + frame.col + '（从右数）']);
+      if (frame.digit !== undefined && frame.digit !== null) out.push(['本位', '= ' + frame.digit]);
+      return out;
+    },
     build: function (view, lane) {
       view.rows = view.rows || lane.rows || [[]];
       var maxLen = 0;
@@ -223,6 +229,57 @@
         rr.appendChild(rb);
       }
       view.gridEl.appendChild(rr);
+    }
+  };
+
+  /* ==================================================================
+     渲染器 3：cells —— 一排表格单元（DP 表格 / 调用序列）
+     帧字段：values（单元格文本）col（当前格）from（来源格）caption（浮标）
+     ================================================================== */
+
+  RENDERERS.cells = {
+    status: function (frame) {
+      var out = [];
+      if (frame.values) out.push(['已算出', '= ' + frame.values.length + ' 格']);
+      if (frame.from && frame.from.length) {
+        out.push(['取自', '= ' + frame.from.map(function (x) { return 'f(' + x + ')'; }).join(' + ')]);
+      }
+      return out;
+    },
+    build: function (view, lane) {
+      view.stageEl.classList.add('stage-cells');
+      view.ovEl = svgEl('svg', { class: 'v-ov' });
+      view.cellsEl = el('div', 'cells');
+      view.capEl = el('div', 'cell-cap-layer');
+      view.stageEl.appendChild(view.ovEl);
+      view.stageEl.appendChild(view.cellsEl);
+      view.stageEl.appendChild(view.capEl);
+    },
+    update: function (view, frame) {
+      clear(view.cellsEl);
+      clear(view.capEl);
+      var values = frame.values || [];
+      var curCell = null;
+      for (var i = 0; i < values.length; i++) {
+        var cell = el('div', 'cell');
+        if (frame.from && frame.from.indexOf(i) >= 0) cell.classList.add('is-from');
+        if (i === frame.col) { cell.classList.add('is-cur'); curCell = cell; }
+        cell.appendChild(el('span', 'cell-v', values[i]));
+        view.cellsEl.appendChild(cell);
+      }
+      // 浮标：定位到当前格子上方，并夹在容器内，避免溢出边界
+      if (curCell && frame.caption) {
+        var cap = el('div', 'cell-cap', frame.caption);
+        view.capEl.appendChild(cap);
+        var sr = view.stageEl.getBoundingClientRect();
+        var cr = curCell.getBoundingClientRect();
+        var pr = cap.getBoundingClientRect();
+        var left = cr.left - sr.left + cr.width / 2 - pr.width / 2;
+        left = Math.max(0, Math.min(left, sr.width - pr.width));
+        var top = cr.top - sr.top - pr.height - 6;
+        cap.style.left = left + 'px';
+        cap.style.top = Math.max(0, top) + 'px';
+      }
     }
   };
 
@@ -307,15 +364,18 @@
       s.appendChild(el('span', 'v', v));
       statusEl.appendChild(s);
     }
-    if (frame.i !== undefined && frame.i !== null) stat('i', '= ' + frame.i);
-    if (frame.j !== undefined && frame.j !== null) stat('j', '= ' + frame.j);
-    if (frame.window) {
-      var toks = this.tokens || (this.lane.input || '').split('');
-      var txt = toks.slice(frame.window[0], frame.window[1] + 1).join(' ');
-      stat('区间', '[' + frame.window[0] + ', ' + frame.window[1] + '] = ' + txt);
+    var stats = this.renderer.status ? this.renderer.status(frame, this) : null;
+    if (!stats) {
+      stats = [];
+      if (frame.i !== undefined && frame.i !== null) stats.push(['i', '= ' + frame.i]);
+      if (frame.j !== undefined && frame.j !== null) stats.push(['j', '= ' + frame.j]);
+      if (frame.window) {
+        var toks = this.tokens || (this.lane.input || '').split('');
+        var txt = toks.slice(frame.window[0], frame.window[1] + 1).join(' ');
+        stats.push(['区间', '[' + frame.window[0] + ', ' + frame.window[1] + '] = ' + txt]);
+      }
     }
-    if (frame.col !== undefined && frame.col !== null) stat('列', '= ' + frame.col + '（从右数）');
-    if (frame.digit !== undefined && frame.digit !== null) stat('本位', '= ' + frame.digit);
+    stats.forEach(function (pair) { stat(pair[0], pair[1]); });
     renderVars(this.chipsEl, frame.vars);
 
     clear(this.detailEl);
