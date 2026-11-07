@@ -284,6 +284,45 @@
   };
 
   /* ==================================================================
+     渲染器 4：triangle —— 居中的三角形（杨辉三角这类二维递推结构）
+     帧字段：rows（二维数组）row col from（[[r,c],...]）caption
+     ================================================================== */
+
+  RENDERERS.triangle = {
+    status: function (frame) {
+      var out = [];
+      if (frame.caption) out.push(['当前', '= ' + frame.caption]);
+      if (frame.row !== undefined && frame.row !== null) out.push(['当前行', '= 第 ' + frame.row + ' 行']);
+      if (frame.rows) out.push(['已生成', '= ' + frame.rows.length + ' 行']);
+      return out;
+    },
+    build: function (view, lane) {
+      view.stageEl.classList.add('stage-triangle');
+      view.triEl = el('div', 'tri');
+      view.stageEl.appendChild(view.triEl);
+    },
+    update: function (view, frame) {
+      clear(view.triEl);
+      var rows = frame.rows || [];
+      var sources = frame.from || [];
+      var curCell = null;
+
+      rows.forEach(function (row, ri) {
+        var rowEl = el('div', 'tri-row');
+        row.forEach(function (v, ci) {
+          var cell = el('div', 'cell');
+          var isSrc = sources.some(function (p) { return p[0] === ri && p[1] === ci; });
+          if (isSrc) cell.classList.add('is-from');
+          if (ri === frame.row && ci === frame.col) { cell.classList.add('is-cur'); curCell = cell; }
+          cell.appendChild(el('span', 'cell-v', String(v)));
+          rowEl.appendChild(cell);
+        });
+        view.triEl.appendChild(rowEl);
+      });
+    }
+  };
+
+  /* ==================================================================
      轨道视图
      ================================================================== */
 

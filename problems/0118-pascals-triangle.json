@@ -1,0 +1,41 @@
+{
+  "id": "0118",
+  "slug": "0118-pascals-triangle",
+  "title": "杨辉三角",
+  "title_en": "Pascal's Triangle",
+  "difficulty": "简单",
+  "tags": ["动态规划", "数组", "二维递推"],
+  "summary": "每一行只依赖上一行：第 i 行的第 j 格 = 上一行第 j-1 格 + 第 j 格。",
+  "notes": "**核心思路**\n\n```\n        1\n       1 1\n      1 2 1\n     1 3 3 1\n    1 4 6 4 1\n```\n\n观察第 3 行：`1 3 3 1` 里的两个 3，都是由上一行 `1 2 1` 的相邻两格相加得到的。\n\n所以**每一行只依赖上一行**，只要记住上一行就够了 —— 边算边把整行攒进结果里。\n\n**两个容易漏的地方**\n\n> 1. **两端的 1 是边界**，不参与相加，要单独补上（代码里的 `rowI = [1]` 和 `rowI.append(1)`）。\n> 2. **别把上一行的最后两个数也用上**。上一行有 `k` 个数，当前行中间的格子只有 `k-1` 个，\n>    所以循环条件是 `j < len(prevRow) - 1`。\n\n**另一种写法：组合数公式**\n\n杨辉三角第 i 行第 j 格就是组合数 `C(i, j)`，可以直接用 `math.comb` 算：\n\n- 好处：每个格子**互不依赖**，两端的 1 也天然包含在公式里，不用单独处理边界\n- 代价：把「数从哪来」这件事藏进了库里；n 大时还有大整数开销\n\n下面两条动图放在一起对比，能直观看出「局部推导」和「全局公式」的区别。",
+  "code": "code/0118_pascals_triangle.py",
+  "snippets": ["Solution", "SolutionByFormula"],
+  "complexity": [
+    ["写法", "时间复杂度", "空间复杂度", "格子之间有依赖吗"],
+    ["逐行推导（推荐）", "O(n²)", "O(n²)", "有：每格 = 上一行相邻两格"],
+    ["组合数公式", "O(n²)", "O(n²)", "没有：每格独立算 C(i, j)"]
+  ],
+  "demo": {
+    "type": "triangle",
+    "args": [7],
+    "compareArgs": [7],
+    "compareTitle": "同一个输入：逐格推导（格子有来源）vs 组合数公式（格子独立）",
+    "lanes": [
+      {
+        "name": "逐格推导（推荐提交）",
+        "badge": "O(n²)",
+        "variant": "good",
+        "code": "Solution",
+        "trace": "trace_rows",
+        "showCode": true
+      },
+      {
+        "name": "组合数公式",
+        "badge": "O(n²)",
+        "variant": "neutral",
+        "code": "SolutionByFormula",
+        "trace": "trace_formula",
+        "showCode": false
+      }
+    ]
+  }
+}

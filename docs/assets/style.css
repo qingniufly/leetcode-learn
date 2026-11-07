@@ -366,3 +366,10 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
   background: var(--card); border: 1px solid var(--border); border-radius: 6px;
   padding: 3px 9px; box-shadow: var(--shadow); font-family: var(--font-mono);
 }
+
+/* ---------------- triangle 渲染器：杨辉三角 ---------------- */
+
+.stage-triangle { padding-top: 48px; }
+.tri { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.tri-row { display: flex; justify-content: center; gap: 5px; }
+.tri-row .cell { min-width: 42px; }
