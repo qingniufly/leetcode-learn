@@ -323,6 +323,59 @@
   };
 
   /* ==================================================================
+     渲染器 5：row —— 横向的一行（119 只要一行，不是整张三角）
+     帧字段：rows（二维数组，每个元素是一条横向带）labels（每条带的标题）
+             row（当前所在的带）col（当前列）from（来源格 [[带,列],...]）
+     ================================================================== */
+
+  RENDERERS.row = {
+    status: function (frame) {
+      var out = [];
+      if (frame.caption) out.push(['当前', '= ' + frame.caption]);
+      if (frame.row !== undefined && frame.row !== null && frame.col !== undefined && frame.col !== null) {
+        out.push(['算到', '= 第 ' + frame.col + ' 格']);
+      }
+      if (frame.rows && frame.rows.length) {
+        // 目标行 = 最后一条带
+        out.push(['格子数', '= ' + (frame.rows[frame.rows.length - 1] || []).length]);
+      }
+      return out;
+    },
+    build: function (view, lane) {
+      view.stageEl.classList.add('stage-row');
+      view.rowWrapEl = el('div', 'rwrap');
+      view.stageEl.appendChild(view.rowWrapEl);
+    },
+    update: function (view, frame) {
+      clear(view.rowWrapEl);
+      var rows = frame.rows || [];
+      var labels = frame.labels || [];
+      var sources = frame.from || [];
+
+      rows.forEach(function (strip, ri) {
+        // 最后一条带 = 正在算的那一行；更早的带 = 上一行（来源，压暗）
+        var stripEl = el('div', 'rstrip' + (ri === rows.length - 1 ? ' is-target' : ' is-prev'));
+        if (labels[ri]) stripEl.appendChild(el('div', 'rstrip-label', labels[ri]));
+        var cellsEl = el('div', 'rcells');
+        (strip || []).forEach(function (v, ci) {
+          var cell = el('div', 'cell');
+          if (v === null || v === undefined) {
+            cell.classList.add('is-empty');
+          } else {
+            cell.appendChild(el('span', 'cell-v', String(v)));
+          }
+          var isSrc = sources.some(function (p) { return p[0] === ri && p[1] === ci; });
+          if (isSrc) cell.classList.add('is-from');
+          if (ri === frame.row && ci === frame.col) cell.classList.add('is-cur');
+          cellsEl.appendChild(cell);
+        });
+        stripEl.appendChild(cellsEl);
+        view.rowWrapEl.appendChild(stripEl);
+      });
+    }
+  };
+
+  /* ==================================================================
      轨道视图
      ================================================================== */
 
@@ -701,6 +754,85 @@
   }
 
   /* ==================================================================
+     「只要一行就够」交互图
+     点杨辉三角的任意一行 —— 那一行只依赖上一行，更上面的行算完就能扔掉。
+     ================================================================== */
+
+  function initRowFigure() {
+    var host = document.querySelector('[data-row-figure]');
+    if (!host) return;
+    var svg = host.querySelector('.rf-svg');
+    var detail = host.querySelector('.rf-detail');
+    var ROWS = parseInt(host.getAttribute('data-rows'), 10) || 8;
+    var sel = Math.min(4, ROWS - 1);
+
+    function triangle() {
+      var t = [[1]];
+      for (var r = 1; r < ROWS; r++) {
+        var prev = t[r - 1], cur = [1];
+        for (var j = 1; j < prev.length; j++) cur.push(prev[j - 1] + prev[j]);
+        cur.push(1);
+        t.push(cur);
+      }
+      return t;
+    }
+    var TABLE = triangle();
+
+    function draw() {
+      var W = host.clientWidth || 640;
+      var cellW = 44, gap = 8, rowH = 40, top = 8;
+      var unit = cellW + gap;
+      var H = top + ROWS * rowH + 6;
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      svg.setAttribute('width', W);
+      svg.setAttribute('height', H);
+      clear(svg);
+
+      function cx(r, c) { return W / 2 + (c - r / 2) * unit; }
+      function cy(r) { return top + r * rowH + rowH / 2; }
+
+      TABLE.forEach(function (row, r) {
+        row.forEach(function (v, c) {
+          var isSel = (r === sel);
+          var g = svgEl('g', {});
+          var rect = svgEl('rect', {
+            x: cx(r, c) - cellW / 2, y: cy(r) - rowH / 2 + 4,
+            width: cellW, height: rowH - 8, rx: 6,
+            class: 'rf-cell' + (isSel ? ' is-sel' : '')
+          });
+          rect.addEventListener('click', function () { sel = r; draw(); });
+          var title = svgEl('title', {});
+          title.textContent = '第 ' + r + ' 行：' + row.join(' ') + '（点一下选中这一行）';
+          rect.appendChild(title);
+          g.appendChild(rect);
+          var t = svgEl('text', { x: cx(r, c), y: cy(r), class: 'rf-num' + (isSel ? ' is-sel' : '') });
+          t.textContent = v;
+          g.appendChild(t);
+          svg.appendChild(g);
+        });
+      });
+
+      var row = TABLE[sel];
+      var total = 0;
+      for (var i = 1; i <= sel + 1; i++) total += i;
+      svg.setAttribute('aria-label',
+        '杨辉三角共 ' + ROWS + ' 行。选中第 ' + sel + ' 行，共 ' + row.length +
+        ' 个数：' + row.join(' ') + '。');
+
+      clear(detail);
+      var sp = el('span');
+      sp.innerHTML = '选中第 <b>' + sel + '</b> 行 → <code>getRow(' + sel + ')</code> 返回 <b>[' +
+        row.join(', ') + ']</b>，共 <b>' + row.length + '</b> 个数。<br>' +
+        '这一行只依赖<b>上一行</b>，所以更上面的行算完就可以扔掉：' +
+        '存整张三角要 <b>' + total + '</b> 个数，<b>只留一行只要 ' + row.length + ' 个</b>。';
+      detail.appendChild(sp);
+    }
+
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(draw).observe(host);
+  }
+
+  /* ==================================================================
      代码标签页
      ================================================================== */
 
@@ -730,6 +862,7 @@
     initTabs();
     initFilter();
     initPathFigure();
+    initRowFigure();
     var dataEl = document.getElementById('problem-data');
     var host = document.getElementById('player');
     if (!dataEl || !host) return;

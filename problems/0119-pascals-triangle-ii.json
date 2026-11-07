@@ -1,0 +1,90 @@
+{
+  "id": "0119",
+  "slug": "0119-pascals-triangle-ii",
+  "title": "杨辉三角 II",
+  "title_en": "Pascal's Triangle II",
+  "difficulty": "简单",
+  "tags": [
+    "组合数",
+    "动态规划",
+    "数组",
+    "一行递推"
+  ],
+  "summary": "只要杨辉三角的第 rowIndex 行：用乘法公式从左往右推，O(rowIndex) 时间、O(1) 额外空间。",
+  "notes": "**和 118 的区别：118 要「前 numRows 行」，119 只要「一行」**\n\n118 的返回值是二维列表，整张三角都得留着，所以是 `O(n²)` 空间。\n119 只返回第 `rowIndex` 行 —— **整张三角一次都不用建**。\n\n先确认两个下标细节：\n\n> - `rowIndex` **从 0 开始**：第 0 行是 `[1]`，不是 `[1, 1]`\n> - 返回长度是 `rowIndex + 1`，因为第 n 行有 n+1 个数\n\n**最初那个写法错在哪**\n\n```\nreturn [comb(i, j) for i in range(rowIndex) for j in range(i + 1)]\n```\n\n双重循环把**前 rowIndex 行**的所有数字摊平成一个列表返回了 —— 既不是第 `rowIndex` 行，\n还因为 `range(rowIndex)` 少算了一行。`rowIndex = 4` 时它返回 10 个数，正确答案是 5 个。\n\n只取一行，应该是：\n\n```\n[comb(rowIndex, j) for j in range(rowIndex + 1)]\n```\n\n**三种写法**\n\n| 写法 | 思路 | 时间 | 额外空间 |\n| --- | --- | --- | --- |\n| 乘法公式 | 每格由同一行的前一格推出 | O(rowIndex) | O(1) |\n| 组合数公式 | 每格独立算 C(rowIndex, j) | O(rowIndex) | O(1) |\n| 滚动上一行 | 118 的思路搬过来，只留上一行 | O(rowIndex²) | O(rowIndex) |\n\n**乘法公式为什么能一路推下去**\n\n组合数满足：\n\n```\nC(n, j) = C(n, j-1) × (n-j+1) ÷ j\n```\n\n第 0 格恒为 1，每一格都能从上上一格直接算出来，所以**整行一趟从左往右推完**，\n不需要任何「上一行」。中间用整除 `//` 是安全的：组合数恒为整数。\n\n**关于 `math.comb` 的复杂度，有个实现细节**\n\n`math.comb` 在 CPython 里对 `n ≤ 67` 有一张**预计算查找表**，命中就是 O(1)。\n实测边界正好在 67 / 68 之间（67 是 0.038 µs，68 涨到 0.117 µs，直接切到乘法算法）。\n\n题目的约束是 `rowIndex ≤ 29`，**远在表内**，所以 `comb` 版就是严格的 O(rowIndex) 时间。\n但如果 rowIndex 超过 67，它会退化成乘法算法 + 大整数，就不再是 O(1) 了 ——\n这也是为什么「自己推一遍」的乘法公式版更稳：它不依赖任何运行时的内部实现。\n\n下面三条动图放在一起对比，可以直接看出三种写法的步数差多少。",
+  "rowFigure": {
+    "rows": 8,
+    "title": "为什么只要一行就够",
+    "subtitle": "点杨辉三角的任意一行，看这一行只依赖上一行",
+    "text": "**118 要整张三角，119 只要一行**\n\n上面这张图里，每一行都只依赖**它的上一行**：\n\n- 第 4 行的 `1 4 6 4 1`，每个数都是第 3 行 `1 3 3 1` 相邻两格相加\n- 第 4 行算完之后，第 3 行、第 2 行、第 1 行**一个都用不上了**\n\n所以算第 n 行时，内存里最多同时存在**两行**：正在写的这一行，和它的上一行。\n\n**换个角度：直接用公式，连上一行都不用留**\n\n既然第 n 行第 j 格恒等于 `C(n, j)`，那就可以用乘法公式\n\n```\nC(n, j) = C(n, j-1) × (n-j+1) ÷ j\n```\n\n从左往右一趟推完 —— **额外空间只剩一个变量**。这就是上面动图里第一条轨道做的事。\n\n**空间账本**\n\n| 做法 | 要同时存多少个数（n = 10 时） |\n| --- | --- |\n| 118：存整张三角 | 1+2+…+11 = **66** 个 |\n| 滚动上一行 | **22** 个（两行） |\n| 乘法公式 | **1** 个（一个滚动变量）+ 返回的那一行 |\n\n**这就是 119 相对 118 最大的区别**：118 是「要什么给什么」，119 是「只给要的那一行」，\n所以能从 O(n²) 降到 O(n)。",
+    "hint": "点任意一行"
+  },
+  "code": "code/0119_pascals_triangle_ii.py",
+  "snippets": [
+    "Solution",
+    "SolutionByComb",
+    "SolutionByRow"
+  ],
+  "complexity": [
+    [
+      "写法",
+      "时间复杂度",
+      "额外空间",
+      "格子之间有依赖吗"
+    ],
+    [
+      "乘法公式（推荐）",
+      "O(rowIndex)",
+      "O(1)",
+      "有：只依赖同一行的前一格"
+    ],
+    [
+      "组合数公式",
+      "O(rowIndex)",
+      "O(1)",
+      "没有：每格独立算 C(rowIndex, j)"
+    ],
+    [
+      "滚动上一行",
+      "O(rowIndex²)",
+      "O(rowIndex)",
+      "有：每格依赖上一行相邻两格"
+    ]
+  ],
+  "demo": {
+    "type": "row",
+    "args": [
+      8
+    ],
+    "compareArgs": [
+      8
+    ],
+    "compareTitle": "同一个 rowIndex = 8：乘法公式（9 步）vs 组合数公式（9 步）vs 滚动上一行（37 步）",
+    "lanes": [
+      {
+        "name": "乘法公式（推荐提交）",
+        "badge": "O(rowIndex)",
+        "variant": "good",
+        "code": "Solution",
+        "trace": "trace_mul",
+        "showCode": true
+      },
+      {
+        "name": "组合数公式",
+        "badge": "O(rowIndex)",
+        "variant": "neutral",
+        "code": "SolutionByComb",
+        "trace": "trace_comb",
+        "showCode": false
+      },
+      {
+        "name": "滚动上一行",
+        "badge": "O(rowIndex²)",
+        "variant": "warn",
+        "code": "SolutionByRow",
+        "trace": "trace_roll",
+        "showCode": false
+      }
+    ]
+  }
+}

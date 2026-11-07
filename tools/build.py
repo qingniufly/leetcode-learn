@@ -395,6 +395,31 @@ def render_path_figure(fig: dict) -> str:
     ) % (title, html.escape(fig.get("subtitle", "")) or hint, hint, rows, body)
 
 
+def render_row_figure(fig: dict) -> str:
+    """「只要一行就够」交互图：点杨辉三角的任意一行，看它只依赖上一行。"""
+    if not fig:
+        return ""
+    rows = int(fig.get("rows", 8))
+    title = html.escape(fig.get("title", ""))
+    subtitle = html.escape(fig.get("subtitle", ""))
+    text = render_md(fig.get("text", ""))
+    body = ""
+    if text:
+        body = '<div class="card md rf-text">%s</div>' % text
+    return (
+        '<section id="one-row">'
+        '<div class="sec-head"><h2>%s</h2><p>%s</p></div>'
+        '<div class="card">'
+        '<div class="rf" data-row-figure data-rows="%d">'
+        '<svg class="rf-svg" role="img" aria-label="杨辉三角，点任意一行查看这一行返回什么"></svg>'
+        '<div class="rf-detail"></div>'
+        '</div>'
+        '</div>'
+        '%s'
+        '</section>'
+    ) % (title, subtitle, rows, body)
+
+
 def render_tags(tags: list, clickable: bool = False) -> str:
     cls = "tag tag-card" if clickable else "tag"
     return "".join(
@@ -430,6 +455,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         nav.append('<span></span>')
 
     figure_section = render_path_figure(meta.get("pathFigure"))
+    row_figure_section = render_row_figure(meta.get("rowFigure"))
     has_complexity = bool(problem["complexity"])
 
     notes_section = ""
@@ -452,6 +478,8 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
     sections.append(("demo", "动图讲解"))
     if figure_section:
         sections.append(("why-combination", "为什么正好是 C(i, j)"))
+    if row_figure_section:
+        sections.append(("one-row", "只要一行就够"))
     sections.append(("code", "完整代码"))
     if has_complexity:
         sections.append(("complexity", "复杂度对比"))
@@ -466,6 +494,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         "ASSET_VERSION": asset_version(),
         "NOTES_SECTION": notes_section,
         "FIGURE_SECTION": figure_section,
+        "ROWFIGURE_SECTION": row_figure_section,
         "COMPLEXITY_SECTION": complexity_section,
         "TITLE": html.escape(meta["title"]),
         "TITLE_EN": html.escape(meta.get("title_en", "")),

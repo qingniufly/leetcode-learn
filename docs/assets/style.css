@@ -374,6 +374,50 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
 .tri-row { display: flex; justify-content: center; gap: 5px; }
 .tri-row .cell { min-width: 42px; }
 
+/* ---------------- row 渲染器：只要一行 ---------------- */
+
+.stage-row { padding-top: 44px; }
+.rwrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.rstrip { display: flex; align-items: center; gap: 10px; }
+.rstrip-label {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-foreground);
+  min-width: 62px; text-align: right;
+}
+.rstrip.is-prev .rstrip-label { color: var(--muted-foreground); opacity: .8; }
+.rstrip.is-prev .cell { opacity: .62; }
+.rcells { display: flex; gap: 5px; }
+.rcells .cell { min-width: 40px; }
+.cell.is-empty {
+  background: transparent; border-style: dashed; border-color: var(--border);
+  opacity: .55;
+}
+.cell.is-empty::after {
+  content: "?"; color: var(--muted-foreground); font-weight: 400;
+  font-family: var(--font-mono);
+}
+
+/* ---------------- 「只要一行」交互图 ---------------- */
+
+.rf { position: relative; }
+.rf-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rf-cell {
+  fill: var(--muted); stroke: var(--border); stroke-width: 1; cursor: pointer;
+  transition: fill .15s ease, stroke .15s ease;
+}
+.rf-cell:hover { stroke: var(--accent); }
+.rf-cell.is-sel {
+  fill: color-mix(in srgb, var(--viz-series-1) 26%, transparent);
+  stroke: var(--viz-series-1); stroke-width: 2;
+}
+.rf-num {
+  fill: var(--foreground); font-family: var(--font-mono); font-size: 13px;
+  text-anchor: middle; dominant-baseline: central; pointer-events: none;
+}
+.rf-num.is-sel { font-weight: 700; }
+.rf-detail { margin-top: 12px; font-size: 14px; }
+.rf-detail b { font-family: var(--font-mono); }
+.rf-text { margin-top: 14px; }
+
 /* ---------------- 路径计数图表（组合数 ↔ 杨辉三角） ---------------- */
 
 .pf { position: relative; }

@@ -15,13 +15,15 @@
 │   ├── 0002_add_two_numbers.py
 │   ├── 0003_longest_substring_without_repeating_characters.py
 │   ├── 0070_climbing_stairs.py
-│   └── 0118_pascals_triangle.py
+│   ├── 0118_pascals_triangle.py
+│   └── 0119_pascals_triangle_ii.py
 ├── problems/        # ← 每道题一份配置，加新题的主要入口
 │   ├── 0001-two-sum.json
 │   ├── 0002-add-two-numbers.json
 │   ├── 0003-longest-substring.json
 │   ├── 0070-climbing-stairs.json
-│   └── 0118-pascals-triangle.json
+│   ├── 0118-pascals-triangle.json
+│   └── 0119-pascals-triangle-ii.json
 ├── tools/
 │   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
 ├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
@@ -76,6 +78,7 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
 | `digits` | 两行数字 + 进位箭头 + 结果逐位生成 | 竖式加法 | 第 2 题 |
 | `cells` | 一排表格单元 + 来源格高亮 + 浮标公式 | 动态规划表格、递归调用序列 | 第 70 题 |
 | `triangle` | 居中的二维三角形 + 来源格高亮 | 杨辉三角这类二维递推结构 | 第 118 题 |
+| `row` | 横向的单行 + 上一行（压暗）+ 来源格高亮 | 只要某一行、不需要整张表的题 | 第 119 题 |
 
 新增一种画法 = 在 `docs/assets/site.js` 的 `RENDERERS` 里注册一个渲染函数，
 再把题目配置里的 `demo.type` 指过去。
@@ -164,6 +167,7 @@ cd docs && python3 -m http.server 8000
 | 3 | 无重复字符的最长子串 | 中等 | 滑动窗口 + 字典记录上次出现位置 | `array` + 区间托架 |
 | 70 | 爬楼梯 | 简单 | 动态规划 / 斐波那契（滚动变量） | `cells` + DP 表格 |
 | 118 | 杨辉三角 | 简单 | 逐行推导（上一行相邻两格相加） | `triangle` + 来源格高亮 |
+| 119 | 杨辉三角 II | 简单 | 组合数乘法公式（一行内自推） | `row` + 上一行对照 |
 
 🌐 [在线阅读](https://qingniufly.github.io/leetcode-learn/)
 
@@ -174,6 +178,20 @@ cd docs && python3 -m http.server 8000
 
 > 也不要「左端只回退一格再重扫」：结果虽然对，但最坏 `O(n²)`，串长 `n` 时内层循环跑约 `n(n+1)/2` 次，
 > `n = 5×10⁴` 时约需 100 秒，必定超时。
+
+### 本期要点回顾（LeetCode 119）
+
+> 118 是「要什么给什么」，119 是「只给要的那一行」—— 所以空间能从 `O(n²)` 降到 `O(n)`。
+>
+> 最容易写错的是**双重循环**：写成 `[comb(i, j) for i in range(rowIndex) for j in range(i + 1)]`，
+> 返回的是**前 rowIndex 行**摊平后的所有数字（`rowIndex = 4` 时返回 10 个数，答案是 5 个），
+> 而且 `range(rowIndex)` 还少算了一行。只要一行就该写成 `[comb(rowIndex, j) for j in range(rowIndex + 1)]`。
+>
+> `rowIndex` **从 0 开始**（第 0 行是 `[1]`），所以返回长度是 `rowIndex + 1`。
+>
+> 推荐用乘法公式 `C(n, j) = C(n, j-1) × (n-j+1) ÷ j`：严格 `O(rowIndex)` 时间、`O(1)` 额外空间，
+> 且不依赖运行时的内部实现 —— `math.comb` 在 CPython 里对 `n ≤ 67` 靠预计算表做到 O(1)，
+> 超过 67 就退化成乘法算法 + 大整数了。
 
 ---
 
