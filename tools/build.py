@@ -54,6 +54,22 @@ def write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def asset_version() -> str:
+    """按 docs/assets 下资源的内容算一个短哈希，作为 URL 的版本号。
+
+    浏览器对静态资源有缓存，改了 site.js / style.css 后如果不带版本号，
+    用户可能拿到旧文件（表现为「页面结构在、但内容没渲染」）。
+    """
+    import hashlib
+    h = hashlib.sha256()
+    assets = DOCS_DIR / "assets"
+    for path in sorted(assets.glob("*")):
+        if path.is_file():
+            h.update(path.name.encode())
+            h.update(path.read_bytes())
+    return h.hexdigest()[:8]
+
+
 def fill(template: str, values: dict) -> str:
     for key, val in values.items():
         template = template.replace("{{%s}}" % key, val)
@@ -414,6 +430,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         nav.append('<span></span>')
 
     figure_section = render_path_figure(meta.get("pathFigure"))
+    has_complexity = bool(problem["complexity"])
 
     notes_section = ""
     if meta.get("notes"):
@@ -429,9 +446,24 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
             '<div class="card">%s</div></section>' % render_complexity(problem["complexity"])
         )
 
+    sections = []
+    if meta.get("notes"):
+        sections.append(("notes", "解题思路"))
+    sections.append(("demo", "动图讲解"))
+    if figure_section:
+        sections.append(("why-combination", "为什么正好是 C(i, j)"))
+    sections.append(("code", "完整代码"))
+    if has_complexity:
+        sections.append(("complexity", "复杂度对比"))
+    secnav = ('<nav class="secnav" aria-label="本页内容">'
+              + "".join('<a href="#%s">%s</a>' % (sid, label) for sid, label in sections)
+              + '</nav>')
+
     return fill(read(TEMPLATE_PROBLEM), {
         "ID": html.escape(meta["id"]),
         "DIFFICULTY_CLASS": difficulty_class(meta.get("difficulty", "")),
+        "SECNAV": secnav,
+        "ASSET_VERSION": asset_version(),
         "NOTES_SECTION": notes_section,
         "FIGURE_SECTION": figure_section,
         "COMPLEXITY_SECTION": complexity_section,
@@ -497,6 +529,7 @@ def render_index_page(problems: list[dict]) -> str:
 
     return fill(read(TEMPLATE_INDEX), {
         "ASSETS": "assets",
+        "ASSET_VERSION": asset_version(),
         "COUNT": str(len(problems)),
         "CARDS": "\n".join(cards),
         "TAGS": tag_cloud,

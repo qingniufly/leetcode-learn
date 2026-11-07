@@ -399,3 +399,14 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
 .pf-detail { margin-top: 12px; font-size: var(--font-size-base, 14px); }
 .pf-detail b { font-family: var(--font-mono); }
 .pf-text { margin-top: 14px; }
+
+/* ---------------- 题目页：区块导航 ---------------- */
+
+.secnav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.secnav a {
+  font-size: 13px; text-decoration: none; color: var(--muted-foreground);
+  border: 1px solid var(--border); background: var(--muted);
+  padding: 3px 11px; border-radius: 20px;
+  transition: border-color .15s ease, color .15s ease;
+}
+.secnav a:hover { border-color: var(--accent); color: var(--accent); }
