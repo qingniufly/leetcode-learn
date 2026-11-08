@@ -396,6 +396,61 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
   font-family: var(--font-mono);
 }
 
+/* ---------------- 「乘法公式怎么来的」交互图 ---------------- */
+
+.ff { display: flex; flex-direction: column; gap: 14px; }
+.ff-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ff-ctrl-label { font-size: 13px; color: var(--muted-foreground); }
+.ff-nums { display: flex; gap: 5px; }
+.ff-num {
+  font: inherit; font-size: 13px; font-family: var(--font-mono); cursor: pointer;
+  min-width: 34px; padding: 4px 8px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--muted); color: var(--muted-foreground);
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.ff-num:hover { border-color: var(--accent); color: var(--accent); }
+.ff-num.is-on {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-foreground);
+  font-weight: 600;
+}
+.ff-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.ff-chip {
+  font: inherit; font-size: 14px; font-family: var(--font-mono); font-weight: 600; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--muted); color: var(--muted-foreground);
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.ff-chip:hover { border-color: var(--viz-series-3); color: var(--viz-series-3); }
+.ff-chip.is-on {
+  background: color-mix(in srgb, var(--viz-series-3) 24%, transparent);
+  border-color: var(--viz-series-3); color: var(--foreground);
+}
+.ff-ways { display: flex; flex-direction: column; gap: 5px; }
+.ff-ways-title { font-size: 13.5px; color: var(--muted-foreground); }
+.ff-ways-title b { font-family: var(--font-mono); color: var(--foreground); }
+.ff-way { display: flex; align-items: center; gap: 9px; font-size: 13.5px; }
+.ff-way-no {
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--viz-series-3) 22%, transparent);
+  color: var(--foreground); font-size: 11.5px; font-family: var(--font-mono); font-weight: 700;
+}
+.ff-way-txt { font-family: var(--font-mono); }
+.ff-calc {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px; border-radius: 8px;
+  background: var(--muted); border: 1px solid var(--border);
+}
+.ff-calc-row { display: flex; align-items: baseline; gap: 12px; font-size: 13.5px; }
+.ff-calc-k { color: var(--muted-foreground); min-width: 120px; }
+.ff-calc-v { font-family: var(--font-mono); font-weight: 600; }
+.ff-calc-row.is-total .ff-calc-v { color: var(--viz-series-2); }
+.ff-calc-row.is-fix .ff-calc-v { color: var(--viz-series-1); }
+.ff-calc-row.is-check .ff-calc-v { color: var(--green); }
+.ff-detail { font-size: 13.5px; color: var(--muted-foreground); }
+.ff-detail b { font-family: var(--font-mono); color: var(--foreground); }
+.ff-text { margin-top: 14px; }
+
 /* ---------------- 「只要一行」交互图 ---------------- */
 
 .rf { position: relative; }

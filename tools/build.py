@@ -168,6 +168,16 @@ def render_md(text: str) -> str:
         if all(l.startswith("- ") for l in lines):
             items = "".join("<li>%s</li>" % md_inline(l[2:]) for l in lines)
             blocks.append('<ul class="md-list">%s</ul>' % items)
+        elif len(lines) > 1 and all("|" in l for l in lines) and set(lines[1].replace("|", "").replace(" ", "")) <= set("-:"):
+            # markdown 表格：第二行是 |---|---| 分隔行
+            def cells(line):
+                return [c.strip() for c in line.strip().strip("|").split("|")]
+            head = "".join("<th>%s</th>" % md_inline(c) for c in cells(lines[0]))
+            body = []
+            for row in lines[2:]:
+                body.append("<tr>%s</tr>" % "".join("<td>%s</td>" % md_inline(c) for c in cells(row)))
+            blocks.append('<table class="cmp md-table"><thead><tr>%s</tr></thead><tbody>%s</tbody></table>'
+                          % (head, "".join(body)))
         elif all(l.startswith("> ") for l in lines):
             inner = "<br>".join(md_inline(l[2:]) for l in lines)
             blocks.append('<blockquote class="md-quote">%s</blockquote>' % inner)
@@ -420,6 +430,38 @@ def render_row_figure(fig: dict) -> str:
     ) % (title, subtitle, rows, body)
 
 
+def render_formula_figure(fig: dict) -> str:
+    """「乘法公式怎么来的」交互图：双计数论证。"""
+    if not fig:
+        return ""
+    title = html.escape(fig.get("title", ""))
+    subtitle = html.escape(fig.get("subtitle", ""))
+    text = render_md(fig.get("text", ""))
+    body = ""
+    if text:
+        body = '<div class="card md ff-text">%s</div>' % text
+    return (
+        '<section id="why-formula">'
+        '<div class="sec-head"><h2>%s</h2><p>%s</p></div>'
+        '<div class="card">'
+        '<div class="ff" data-formula-figure>'
+        '<div class="ff-controls">'
+        '<span class="ff-ctrl-label">元素个数 n</span>'
+        '<span class="ff-nums" data-ff-n></span>'
+        '<span class="ff-ctrl-label">一次选几个 j</span>'
+        '<span class="ff-nums" data-ff-j></span>'
+        '</div>'
+        '<div class="ff-chips" data-ff-chips></div>'
+        '<div class="ff-ways" data-ff-ways></div>'
+        '<div class="ff-calc" data-ff-calc></div>'
+        '<div class="ff-detail" data-ff-detail></div>'
+        '</div>'
+        '</div>'
+        '%s'
+        '</section>'
+    ) % (title, subtitle, body)
+
+
 def render_tags(tags: list, clickable: bool = False) -> str:
     cls = "tag tag-card" if clickable else "tag"
     return "".join(
@@ -456,6 +498,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
 
     figure_section = render_path_figure(meta.get("pathFigure"))
     row_figure_section = render_row_figure(meta.get("rowFigure"))
+    formula_figure_section = render_formula_figure(meta.get("formulaFigure"))
     has_complexity = bool(problem["complexity"])
 
     notes_section = ""
@@ -480,6 +523,8 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         sections.append(("why-combination", "为什么正好是 C(i, j)"))
     if row_figure_section:
         sections.append(("one-row", "只要一行就够"))
+    if formula_figure_section:
+        sections.append(("why-formula", "公式怎么来的"))
     sections.append(("code", "完整代码"))
     if has_complexity:
         sections.append(("complexity", "复杂度对比"))
@@ -495,6 +540,7 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         "NOTES_SECTION": notes_section,
         "FIGURE_SECTION": figure_section,
         "ROWFIGURE_SECTION": row_figure_section,
+        "FORMULAFIGURE_SECTION": formula_figure_section,
         "COMPLEXITY_SECTION": complexity_section,
         "TITLE": html.escape(meta["title"]),
         "TITLE_EN": html.escape(meta.get("title_en", "")),

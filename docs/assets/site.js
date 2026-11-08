@@ -833,6 +833,128 @@
   }
 
   /* ==================================================================
+     「乘法公式怎么来的」交互图
+     双计数论证：C(n, j-1) × (n-j+1) 其实是「先选 j-1 个，再补 1 个」的方案数，
+     但每个 j 元集合会被数 j 次（最后补的那个可以是其中任意一个），所以要 ÷ j。
+     ================================================================== */
+
+  function initFormulaFigure() {
+    var host = document.querySelector('[data-formula-figure]');
+    if (!host) return;
+    var nNumsEl = host.querySelector('[data-ff-n]');
+    var jNumsEl = host.querySelector('[data-ff-j]');
+    var chipsEl = host.querySelector('[data-ff-chips]');
+    var waysEl = host.querySelector('[data-ff-ways]');
+    var calcEl = host.querySelector('[data-ff-calc]');
+    var detailEl = host.querySelector('[data-ff-detail]');
+
+    var n = 6, j = 3, picked = [];
+
+    function comb(a, b) {
+      if (b < 0 || b > a) return 0;
+      var v = 1;
+      for (var i = 0; i < b; i++) v = v * (a - i) / (i + 1);
+      return Math.round(v);
+    }
+
+    function numBtn(val, on, onClick) {
+      var b = el('button', 'ff-num' + (on ? ' is-on' : ''), String(val));
+      b.type = 'button';
+      b.addEventListener('click', onClick);
+      return b;
+    }
+
+    function renderNums() {
+      clear(nNumsEl);
+      for (var v = 4; v <= 8; v++) {
+        (function (val) {
+          nNumsEl.appendChild(numBtn(val, val === n, function () {
+            n = val; picked = []; render();
+          }));
+        })(v);
+      }
+      clear(jNumsEl);
+      for (var k = 2; k <= Math.min(4, n); k++) {
+        (function (val) {
+          jNumsEl.appendChild(numBtn(val, val === j, function () {
+            j = val; picked = []; render();
+          }));
+        })(k);
+      }
+    }
+
+    function render() {
+      renderNums();
+
+      // n 个元素，点选 j 个
+      clear(chipsEl);
+      for (var i = 0; i < n; i++) {
+        (function (idx) {
+          var on = picked.indexOf(idx) >= 0;
+          var chip = el('button', 'ff-chip' + (on ? ' is-on' : ''), String(idx + 1));
+          chip.type = 'button';
+          chip.addEventListener('click', function () {
+            var at = picked.indexOf(idx);
+            if (at >= 0) picked.splice(at, 1); else picked.push(idx);
+            render();
+          });
+          chipsEl.appendChild(chip);
+        })(i);
+      }
+
+      clear(waysEl);
+      clear(calcEl);
+
+      if (picked.length !== j) {
+        detailEl.innerHTML = '在上面 <b>' + n + '</b> 个元素里点选 <b>' + j + '</b> 个' +
+          '（已选 ' + picked.length + ' 个），看看这个集合会被重复数几次。';
+        return;
+      }
+
+      // j 种产生方式：最后补上的那个可以是其中任意一个
+      var waysTitle = el('div', 'ff-ways-title');
+      waysTitle.innerHTML = '这个集合 { ' +
+        picked.map(function (x) { return x + 1; }).join(', ') +
+        ' } 被数了 <b>' + j + '</b> 次：';
+      waysEl.appendChild(waysTitle);
+      picked.forEach(function (last, idx) {
+        var others = picked.filter(function (x) { return x !== last; });
+        var row = el('div', 'ff-way');
+        row.appendChild(el('span', 'ff-way-no', String(idx + 1)));
+        row.appendChild(el('span', 'ff-way-txt',
+          '先选 { ' + others.map(function (x) { return x + 1; }).join(', ') +
+          ' }，再补 ' + (last + 1)));
+        waysEl.appendChild(row);
+      });
+
+      // 计数式
+      var c1 = comb(n, j - 1);
+      var rem = n - (j - 1);
+      var prod = c1 * rem;
+      var res = comb(n, j);
+
+      function calcRow(k, v, cls) {
+        var row = el('div', 'ff-calc-row' + (cls ? ' ' + cls : ''));
+        row.appendChild(el('span', 'ff-calc-k', k));
+        row.appendChild(el('span', 'ff-calc-v', v));
+        return row;
+      }
+      calcEl.appendChild(calcRow('先选 j-1 个', 'C(' + n + ', ' + (j - 1) + ') = ' + c1 + ' 种'));
+      calcEl.appendChild(calcRow('再补 1 个', '还剩 n-(j-1) = ' + rem + ' 个可选'));
+      calcEl.appendChild(calcRow('方案总数', c1 + ' × ' + rem + ' = ' + prod + ' 种', 'is-total'));
+      calcEl.appendChild(calcRow('每个集合被数了 j 次', prod + ' ÷ ' + j + ' = ' + res, 'is-fix'));
+      calcEl.appendChild(calcRow('正好是 C(' + n + ', ' + j + ')',
+        'C(' + n + ', ' + j + ') = ' + res + ' ✓', 'is-check'));
+
+      detailEl.innerHTML = '左边数出的是「有顺序的选法」，右边要的是「选出的集合」—— ' +
+        '同一个集合被数了 <b>' + j + '</b> 次，所以要除以 j。';
+    }
+
+    render();
+    if (window.ResizeObserver) new ResizeObserver(render).observe(host);
+  }
+
+  /* ==================================================================
      代码标签页
      ================================================================== */
 
@@ -863,6 +985,7 @@
     initFilter();
     initPathFigure();
     initRowFigure();
+    initFormulaFigure();
     var dataEl = document.getElementById('problem-data');
     var host = document.getElementById('player');
     if (!dataEl || !host) return;
