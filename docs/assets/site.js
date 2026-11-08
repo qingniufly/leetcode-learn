@@ -559,7 +559,9 @@
         var mn = Math.min.apply(null, counts);
         if (mn > 0) ratio = '，相差 <b>' + (mx / mn).toFixed(1) + '</b> 倍';
       }
-      this.resultEl.appendChild(el('span', '', '同一个输入下，' + parts.join('，') + ratio + '。'));
+      var resultText = el('span', '');
+      resultText.innerHTML = '同一个输入下，' + parts.join('，') + ratio + '。';
+      this.resultEl.appendChild(resultText);
     } else {
       this.resultEl.appendChild(el('span', '', '播放中…'));
     }
