@@ -8,22 +8,33 @@
 
 ## 目录结构
 
+> 接手这个仓库（尤其是 AI Agent）先看 [`AGENTS.md`](AGENTS.md)：命名规范、代码约定、动图帧格式、CI 硬门槛都在那里。
+
 ```
 .
+├── AGENTS.md        # ← 给 AI Agent / 新会话的工作说明（规则，先读这个）
 ├── code/            # 解题程序（按题号命名），自带自测与动画轨迹
 │   ├── 0001_two_sum.py
 │   ├── 0002_add_two_numbers.py
 │   ├── 0003_longest_substring_without_repeating_characters.py
+│   ├── 0005_longest_palindromic_substring.py
 │   ├── 0070_climbing_stairs.py
 │   ├── 0118_pascals_triangle.py
-│   └── 0119_pascals_triangle_ii.py
+│   ├── 0119_pascals_triangle_ii.py
+│   ├── 0121_best_time_to_buy_and_sell_stock.py
+│   ├── 0338_counting_bits.py
+│   └── 0392_is_subsequence.py
 ├── problems/        # ← 每道题一份配置，加新题的主要入口
 │   ├── 0001-two-sum.json
 │   ├── 0002-add-two-numbers.json
 │   ├── 0003-longest-substring.json
+│   ├── 0005-longest-palindromic-substring.json
 │   ├── 0070-climbing-stairs.json
 │   ├── 0118-pascals-triangle.json
-│   └── 0119-pascals-triangle-ii.json
+│   ├── 0119-pascals-triangle-ii.json
+│   ├── 0121-best-time-to-buy-and-sell-stock.json
+│   ├── 0338-counting-bits.json
+│   └── 0392-is-subsequence.json
 ├── tools/
 │   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
 ├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
