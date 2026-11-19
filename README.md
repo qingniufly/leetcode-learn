@@ -23,7 +23,8 @@
 │   ├── 0119_pascals_triangle_ii.py
 │   ├── 0121_best_time_to_buy_and_sell_stock.py
 │   ├── 0338_counting_bits.py
-│   └── 0392_is_subsequence.py
+│   ├── 0392_is_subsequence.py
+│   └── 0494_target_sum.py
 ├── problems/        # ← 每道题一份配置，加新题的主要入口
 │   ├── 0001-two-sum.json
 │   ├── 0002-add-two-numbers.json
@@ -34,7 +35,8 @@
 │   ├── 0119-pascals-triangle-ii.json
 │   ├── 0121-best-time-to-buy-and-sell-stock.json
 │   ├── 0338-counting-bits.json
-│   └── 0392-is-subsequence.json
+│   ├── 0392-is-subsequence.json
+│   └── 0494-target-sum.json
 ├── tools/
 │   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
 ├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
@@ -89,7 +91,7 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
 | `digits` | 两行数字 + 进位箭头 + 结果逐位生成 | 竖式加法 | 第 2 题 |
 | `cells` | 一排表格单元 + 来源格高亮 + 浮标公式 | 动态规划表格、递归调用序列 | 第 70 题 |
 | `triangle` | 居中的二维三角形 + 来源格高亮 | 杨辉三角这类二维递推结构 | 第 118 题 |
-| `row` | 横向的单行 + 上一行（压暗）+ 来源格高亮 | 只要某一行、不需要整张表的题 | 第 119 题 |
+| `row` | 横向的单行 + 上一行（压暗）+ 来源格高亮 | 只要某一行、不需要整张表的题 | 第 119、392、494 题 |
 
 新增一种画法 = 在 `docs/assets/site.js` 的 `RENDERERS` 里注册一个渲染函数，
 再把题目配置里的 `demo.type` 指过去。
@@ -183,8 +185,26 @@ cd docs && python3 -m http.server 8000
 | 121 | 买卖股票的最佳时机 | 简单 | 一次遍历 + 维护「到今天为止的最低价」 | `array` + 死循环对照 |
 | 338 | 比特位计数 | 中等 | `answer[i] = answer[i >> 1] + (i & 1)` | `array` + 二进制 token |
 | 392 | 判断子序列 | 简单 | 双指针 / 贪心（能配就配） | `row` + 双串对照 |
+| 494 | 目标和 | 中等 | 子集和计数（0/1 背包，倒序滚动） | `row` + 错误模型对照 |
 
 🌐 [在线阅读](https://qingniufly.github.io/leetcode-learn/)
+
+### 本期要点回顾（LeetCode 494）
+
+> 最容易踩的坑是**把题目读错**：494 要给**每个数独立**选「+」或「-」（2^n 种组合），
+> 选「+」的数**不必连续**。一旦把它当成「挑一段连续子数组求和看等不等于 target」，
+> 就换了个问题——`[1,1,1,1,1], target=3` 正确答案是 5（那个「-」可在任意位置），
+> 连续子数组思路却只数出 3 个长度 3 的窗口，`+1-1+1+1+1` 这种根本不进它的枚举范围。
+>
+> 正确的桥是这一步转化：设添「+」的数之和为 sum(P)，则
+> `sum(P) - sum(N) = target` 且 `sum(P) + sum(N) = total`，相加得
+> `sum(P) = (target + total) / 2`。原题立刻变成「选子集凑出这个和」的 **0/1 背包计数**。
+>
+> 背包计数有两个命门：一是 `dp[0] = 1`（什么都不选算一种，别写成 0）；
+> 二是内层**必须倒序** `for s in range(bag, num-1, -1)`——倒序才能保证每个数只用一次，
+> 正序会把它重复用、退化成完全背包，方案数虚高。
+>
+> 先判无解再开表：`abs(target) > total` 或 `(target+total)` 是奇数，直接返回 0。
 
 ### 本期要点回顾（LeetCode 5）
 
