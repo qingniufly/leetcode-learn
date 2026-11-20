@@ -516,9 +516,9 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         )
 
     sections = []
+    sections.append(("demo", "动图讲解"))
     if meta.get("notes"):
         sections.append(("notes", "解题思路"))
-    sections.append(("demo", "动图讲解"))
     if figure_section:
         sections.append(("why-combination", "为什么正好是 C(i, j)"))
     if row_figure_section:

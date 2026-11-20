@@ -474,13 +474,16 @@
     if (frame.label) this.detailEl.appendChild(el('span', '', frame.label));
     if (frame.note) this.detailEl.appendChild(el('span', 'v-note', '  ' + frame.note));
 
-    this.headCounter.innerHTML = '第 <b>' + (this.idx + 1) + '</b> / ' + this.frames.length + ' 帧';
+    this.headCounter.innerHTML = '<b>' + (this.idx + 1) + '</b> / ' + this.frames.length + ' 帧';
     return frame;
   };
 
   /* ==================================================================
      播放器
      ================================================================== */
+
+  /* 键盘快捷键只作用于「最近点过」的播放器，避免多个播放器抢同一个方向键 */
+  var activePlayer = null;
 
   function Player(container, lanes, opts) {
     this.opts = opts || {};
@@ -493,30 +496,74 @@
     var bar = el('div', 'v-bar');
     var title = el('span', 'v-title', this.opts.title || '');
     var pos = el('span', 'v-pos');
+    var scrub = el('input', 'v-scrub');
+    scrub.type = 'range';
+    scrub.min = '0';
+    scrub.max = String(Math.max(0, this.maxLen - 1));
+    scrub.value = '0';
+    scrub.setAttribute('aria-label', '进度：拖动跳到任意一步');
     var btns = el('div', 'v-btns');
+    var bPrev = el('button', 'v-btn', '上一步');
     var bPlay = el('button', 'v-btn primary', '播放');
-    var bStep = el('button', 'v-btn', '单步');
+    var bNext = el('button', 'v-btn', '下一步');
     var bReset = el('button', 'v-btn', '重置');
-    btns.appendChild(bPlay); btns.appendChild(bStep); btns.appendChild(bReset);
-    bar.appendChild(title); bar.appendChild(pos); bar.appendChild(btns);
+    var speed = el('select', 'v-speed');
+    [['0.5', '0.5×'], ['1', '1×'], ['2', '2×']].forEach(function (pair) {
+      var opt = el('option', '', pair[1]);
+      opt.value = pair[0];
+      if (pair[0] === '1') opt.selected = true;
+      speed.appendChild(opt);
+    });
+    speed.setAttribute('aria-label', '播放速度');
+    btns.appendChild(bPrev); btns.appendChild(bPlay); btns.appendChild(bNext);
+    btns.appendChild(bReset); btns.appendChild(speed);
+    if (this.opts.title) bar.appendChild(title);
+    bar.appendChild(pos); bar.appendChild(scrub); bar.appendChild(btns);
 
     this.lanesEl = el('div', 'lanes');
     this.lanes.forEach(function (l) { self.lanesEl.appendChild(l.root); });
 
     this.resultEl = el('div', 'cmp-result');
     this.posEl = pos;
-    this.bPlay = bPlay; this.bStep = bStep;
+    this.bPlay = bPlay; this.bPrev = bPrev; this.bNext = bNext;
+    this.scrub = scrub;
+    this.speed = 1;
 
     container.appendChild(bar);
     container.appendChild(this.lanesEl);
     if (this.opts.showResult) container.appendChild(this.resultEl);
 
     bPlay.addEventListener('click', function () { self.toggle(); });
-    bStep.addEventListener('click', function () { self.stop(); self.advance(); });
+    bPrev.addEventListener('click', function () { self.stop(); self.seek(self.pos - 1); });
+    bNext.addEventListener('click', function () { self.stop(); self.advance(); });
     bReset.addEventListener('click', function () { self.stop(); self.seek(0); });
+    scrub.addEventListener('input', function () {
+      /* 先把值取出来：stop() 会触发 render()，把进度条重置回当前步 */
+      var v = Number(scrub.value);
+      self.stop();
+      self.seek(v);
+    });
+    speed.addEventListener('change', function () {
+      self.speed = Number(speed.value) || 1;
+      if (self.timer) { self.stop(); self.play(); }
+    });
+
+    /* 点过哪个播放器，键盘就作用于哪个 */
+    container.addEventListener('pointerdown', function () { activePlayer = self; });
+    if (!activePlayer) activePlayer = self;
+
     this.onKey = function (e) {
-      if (e.key === 'ArrowRight') { self.stop(); self.advance(); }
-      if (e.key === 'ArrowLeft') { self.stop(); self.seek(self.pos - 1); }
+      if (activePlayer !== self) return;
+      var tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight') { self.stop(); self.advance(); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { self.stop(); self.seek(self.pos - 1); e.preventDefault(); }
+      else if (e.key === ' ' || e.key === 'Spacebar') {
+        if (tag === 'BUTTON') return;
+        self.toggle(); e.preventDefault();
+      }
+      else if (e.key === 'Home') { self.stop(); self.seek(0); e.preventDefault(); }
+      else if (e.key === 'End') { self.stop(); self.seek(self.maxLen - 1); e.preventDefault(); }
     };
     document.addEventListener('keydown', this.onKey);
     this.seek(0);
@@ -529,13 +576,16 @@
   };
   Player.prototype.advance = function () { this.seek(this.pos + 1); };
   Player.prototype.toggle = function () {
-    var self = this;
     if (this.timer) { this.stop(); return; }
+    this.play();
+  };
+  Player.prototype.play = function () {
+    var self = this;
     if (this.pos >= this.maxLen - 1) this.seek(0);
     this.timer = setInterval(function () {
       if (self.pos >= self.maxLen - 1) { self.stop(); return; }
       self.advance();
-    }, this.opts.interval || 850);
+    }, (this.opts.interval || 850) / (this.speed || 1));
     this.render();
   };
   Player.prototype.stop = function () {
@@ -545,7 +595,10 @@
   Player.prototype.render = function () {
     this.posEl.textContent = '第 ' + (this.pos + 1) + ' / ' + this.maxLen + ' 步';
     this.bPlay.textContent = this.timer ? '暂停' : '播放';
-    this.bStep.disabled = !!this.timer;
+    if (document.activeElement !== this.scrub) this.scrub.value = String(this.pos);
+    this.scrub.setAttribute('aria-valuetext', '第 ' + (this.pos + 1) + ' / ' + this.maxLen + ' 步');
+    this.bPrev.disabled = this.pos <= 0;
+    this.bNext.disabled = this.pos >= this.maxLen - 1;
     if (!this.opts.showResult) return;
     clear(this.resultEl);
     if (this.pos >= this.maxLen - 1) {
@@ -563,7 +616,8 @@
       resultText.innerHTML = '同一个输入下，' + parts.join('，') + ratio + '。';
       this.resultEl.appendChild(resultText);
     } else {
-      this.resultEl.appendChild(el('span', '', '播放中…'));
+      this.resultEl.appendChild(el('span', '',
+        '两条轨道共用同一条时间轴，一步一步同步推进；上面那个结果条会显示各自的步数差异。'));
     }
   };
 
@@ -1002,15 +1056,28 @@
     var main = el('div', 'card');
     host.appendChild(main);
     var mainPlayer = new Player(main, [lanes[0]], {
-      title: (lanes[0].name || '') + ' · 逐步演示',
+      title: '逐步演示',
       interval: 850,
       laneOpts: { type: data.type }
     });
 
+    // 动图滚进视野就自动播一遍（尊重「减少动态效果」偏好）
+    if (window.IntersectionObserver &&
+        !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting && !e.target.dataset.autoplayed) {
+            e.target.dataset.autoplayed = '1';
+            mainPlayer.play();
+          }
+        });
+      }, { threshold: 0.35 });
+      io.observe(main);
+    }
+
     // 代码面板
     if (lanes[0].showCode && lanes[0].codeLines && lanes[0].codeLines.length) {
-      var codeCard = el('div', 'card');
-      codeCard.style.marginTop = '14px';
+      var codeCard = el('div', 'code-panel');
       var pre = el('pre', 'v-code');
       lanes[0].codeLines.forEach(function (h, idx) {
         var line = el('span', 'v-cl');
@@ -1037,11 +1104,14 @@
 
     // 横向对比
     if (lanes.length > 1) {
-      var cmpCard = el('div', 'card');
-      cmpCard.style.marginTop = '16px';
+      var cmpCard = el('div', 'card cmp-card');
       host.appendChild(cmpCard);
+      var cmpTitle = el('div', 'cmp-title');
+      cmpTitle.appendChild(el('b', '', '横向对比'));
+      cmpTitle.appendChild(el('span', '', data.compareTitle || '同一个输入，两种写法并行跑一遍'));
+      cmpCard.appendChild(cmpTitle);
       new Player(cmpCard, lanes, {
-        title: data.compareTitle || '同一个输入，两种写法并行跑一遍',
+        title: '',
         interval: 130,
         showResult: true,
         laneOpts: {
