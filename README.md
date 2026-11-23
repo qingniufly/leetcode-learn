@@ -40,7 +40,8 @@
 │   ├── 0392-is-subsequence.json
 │   └── 0494-target-sum.json
 ├── tools/
-│   └── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
+│   ├── build.py     # 生成器：problems/*.json + code/*.py ==> docs/
+│   └── mock.py      # 闭卷默写 CLI：抽题 → 只给题面 → 计时 → 对拍
 ├── docs/            # 站点（index.html 与 problems/ 由生成器产出，勿手改）
 │   ├── assets/      #   手写：style.css / site.js（通用播放器）
 │   ├── templates/   #   手写：页面骨架
@@ -115,6 +116,58 @@ code/xxx.py  ──写一个 yield 轨迹的函数──▶  problems/xxx.json
 
 ---
 
+## 闭卷默写 · 面试模式
+
+这个仓库也是一套**面试准备工具**。刷题量不是关键，能不能在 20 分钟里讲清一个原理才是。
+所以每道题都配了三样东西：
+
+### 网页上的「盲写模式」
+
+每道题页面顶部有一条工具条：
+
+| 操作 | 效果 |
+| --- | --- |
+| 点「进入盲写」 | 题面之外的内容**全部隐藏**（动图、讲解、代码、复杂度、面试官视角），只留题面 + 计时器 |
+| 计时器 | 按建议用时倒数，超时标红；「重置计时」可重来 |
+| 点「解除盲写」 | 全部内容回来，计时归零 |
+| 目录页「随机盲写一题」 | 随机进一题，直接就是盲写状态 |
+
+翻到下一题仍是盲写（状态存在当前标签页里），也可以用 `?blind=1` 直接进入。
+
+### 「面试官视角」区块
+
+每题页面上的「面试官视角」包含三块：
+
+- **3 分钟怎么讲** —— 一段能直接说出口的话：考的是什么 → 为什么用这个结构 → 复杂度 → 会被追问什么
+- **最容易踩的坑** —— 这题在面试里最常翻车的地方
+- **追问链** —— 面试官会顺着问下去的 4 个问题，答案折叠着，点开才看
+
+### 命令行闭卷默写 `tools/mock.py`
+
+```bash
+python3 tools/mock.py                              # 随机抽一题，只给题面，开始计时
+python3 tools/mock.py --list                       # 列出全部题目
+python3 tools/mock.py --id 0121                    # 指定题号
+python3 tools/mock.py --tag 动态规划,哈希表          # 按标签抽
+python3 tools/mock.py --id 0121 --reveal           # 直接看讲解 + 复杂度表
+python3 tools/mock.py --id 0001 --check mine.py    # 把你写的解和仓库解对拍
+python3 tools/mock.py --id 0001 --check mine.py --case '[[3,3],6]'
+```
+
+出题时**只给题面**，不会泄露 `summary`（那是解法摘要）、讲解和代码 —— 就是模拟真实面试：
+白板上只有题，你写完才算数。写完用 `--check` 让它跟仓库的标准解逐个用例对拍：
+
+```
+  ✅ 输入 nums = [2, 7, 11, 15], target = 9 → [0, 1]
+  ❌ 输入 nums = [3, 3], target = 6
+     你的输出：[0, 0]
+     正确输出：[0, 1]
+──────────────────────────────────────────────────────────
+  通过 2 / 3
+```
+
+---
+
 ## 如何添加一道新题
 
 **只需要两个文件**，其余（目录页、上下题导航、代码标签页、动图播放器、样式）全自动。
@@ -154,10 +207,17 @@ def trace(s: str):
   "difficulty": "中等",                     // 简单 / 中等 / 困难
   "tags": ["双指针", "贪心"],
   "summary": "一句话说清这题在干嘛。",
+  "statement": "题面（不含解法提示），盲写模式和 mock.py 只显示它。",
   "notes": "讲解文案，支持段落、- 列表、> 引用、`行内代码`、**加粗**。",
   "code": "code/0011_container_with_most_water.py",
   "snippets": ["Solution"],                 // 要在页面上展示的 class
   "complexity": [["写法", "时间", "空间"], ["双指针", "O(n)", "O(1)"]],
+  "interview": {                            // 面试官视角，见「面试官视角」区块
+    "minutes": 20,                          // 建议用时（分钟）
+    "pitch": "3 分钟怎么讲……",              // 能直接说出口的话
+    "pitfalls": ["最容易踩的坑……"],
+    "followups": [{"q": "会被追问什么？", "a": "怎么答"}]
+  },
   "demo": {
     "type": "array",                        // 用哪种画法：array / digits
     "args": [[1, 8, 6, 2], 9],              // 传给轨迹函数的参数（任意个数）
@@ -332,4 +392,10 @@ python3 code/0003_longest_substring_without_repeating_characters.py
 
 ```bash
 python3 tools/build.py --check     # 只校验 problems/*.json 与轨迹函数对不对得上
+```
+
+## 闭卷默写
+
+```bash
+python3 tools/mock.py              # 随机抽一题，只给题面，计时，写完再对拍
 ```

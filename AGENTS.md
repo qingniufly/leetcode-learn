@@ -34,6 +34,7 @@ docs/index.html + docs/problems/*.html   生成物（CI 里现生成，不提交
 | `code/<id>_<slug>.py` | 解题程序：`Solution` 类 + 轨迹函数 + `_self_test()` | ✅ 手写，提交 |
 | `problems/<id>-<slug>.json` | 题目配置：标题/难度/标签/讲解文案/复杂度表/动图轨道 | ✅ 手写，提交 |
 | `tools/build.py` | 生成器：跑轨迹函数 → 序列化成 JSON → 渲染页面 | ✅ 手写，提交 |
+| `tools/mock.py` | 闭卷默写 CLI：抽题 → 只给题面 → 计时 → 跟仓库解对拍 | ✅ 手写，提交 |
 | `docs/assets/site.js` | 通用播放器 + 渲染器注册表 | ✅ 手写，提交 |
 | `docs/assets/style.css` | 站点样式 | ✅ 手写，提交 |
 | `docs/templates/*.html` | 页面骨架（`{{占位符}}` 模板） | ✅ 手写，提交 |
@@ -71,8 +72,9 @@ id 用零填充后，字符串排序 == 数值排序，目录页的上下题导�
 ### Step 4 · 选渲染器、造帧
 见 §6。**每个轨道至少要有意义地动起来**——不要出现「一帧都没变」的轨道。
 
-### Step 5 · 更新 README.md
-- 「题目列表」表格加一行（按题号插入）
+### Step 5 · 补面试相关内容 + 更新 README.md
+- `problems/<id>-<slug>.json` 里写好 `statement`（题面）和 `interview`（面试官视角），见 §5.3
+- README.md「题目列表」表格加一行（按题号插入）
 - 补一节「### 本期要点回顾（LeetCode N）」：写这道题**最容易踩的坑**，而不是复述解法
 
 ### Step 6 · 本地校验（三连，缺一不可）
@@ -83,6 +85,8 @@ python3 tools/build.py              # 生成站点
 cd docs && python3 -m http.server 8000   # 浏览器里看一遍动画
 ```
 `--check` 会**真的执行每条轨道的轨迹函数**，所以死循环/异常会当场暴露。
+
+浏览器里还要顺手点一遍**「进入盲写」**：确认题面、样例、计时器都对，其余内容确实藏起来了。
 
 ### Step 7 · 提交 & 推送
 ```bash
@@ -162,10 +166,12 @@ if __name__ == "__main__":
 | `difficulty` | ✅ | 只能是 `简单` / `中等` / `困难`（页面上要靠它上色） |
 | `tags` | ✅ | 数组。**优先复用现有词**：动态规划、数组、双指针、贪心、字符串、哈希表、滑动窗口、位运算、链表、数学、模拟、中心扩展、递归……标签会在目录页汇总成标签云 |
 | `summary` | ✅ | 一句话 |
+| `statement` | ✅ | **题面**（不含解法提示），盲写模式和 `mock.py` 只显示它 |
 | `notes` | ✅ | 讲解正文（markdown）。见 §5.1 |
 | `code` | ✅ | 指向 `code/` 下的 py 文件 |
 | `snippets` | ✅ | 页面上要展示的 class 名列表，必须在代码文件里真实存在 |
 | `complexity` | ✅ | 二维数组，第一行是表头 |
+| `interview` | ✅ | 「面试官视角」：3 分钟话术 + 高频坑 + 追问链。见 §5.3 |
 | `demo` | ✅ | 见 §5.2 |
 
 ### 5.1 `notes` 支持的 markdown
@@ -198,6 +204,37 @@ if __name__ == "__main__":
 - `lanes` 建议 **2 条**：一条推荐解法（`variant: good`），一条对照写法（`variant: warn`）。
 - 轨道数 ≥ 2 时页面自动多出「横向对比」区块，把所有轨道并排播放，并自动算出步数差异。
 - **两条轨道给的输入可以不同**（对比区用 `compareArgs`），但要在 `compareTitle` 里说清楚换输入是为了看什么。
+
+### 5.3 `statement` 与 `interview`（面试准备用）
+
+```jsonc
+"statement": "给定一个整数数组 nums 和一个整数 target……",   // 题面，不含解法提示
+
+"interview": {
+  "minutes": 15,                 // 建议用时（分钟），盲写模式的计时器会显示
+  "pitch": "3 分钟怎么讲……",     // markdown，同 notes 的子集
+  "pitfalls": ["最容易踩的坑……"], // 字符串数组
+  "followups": [                // 追问链：页面上折叠，点开才看答案
+    { "q": "面试官会追问什么？", "a": "怎么答（markdown）" }
+  ]
+}
+```
+
+**`statement` 的规矩**
+
+- 只写**题目本身**（输入、输出、约束），**不要写解法** —— `summary` 已经是解法摘要了。
+- 盲写模式（页面上）和 `tools/mock.py` 只显示 `statement`，所以它就是「闭卷时看到的全部信息」。
+- 别把 LeetCode 原题抄进来，用自己的话概括即可。
+
+**`interview` 的规矩**
+
+- `pitch` 写**能直接说出口的话**：「这题考的是什么 → 为什么用这个结构 → 复杂度多少 → 会被追问什么」。
+  不是复述 `notes`，是换个「面试时怎么说」的口气。
+- `pitfalls` 写**最容易踩的坑**（和 `notes` 末尾的「边界」呼应），别写泛泛的注意事项。
+- `followups` 按**追问的先后顺序**排，从最容易被问的开始；`a` 要给出「面试官口吻」的答案。
+- `minutes` 按难度给：简单 12–15、中等 20–25、困难 25–30。
+
+**校验**：`tools/build.py --check` 会检查这几个字段的类型（`pitch` 必须是字符串、`pitfalls` 必须是字符串数组、`followups` 每项必须含 `q`），格式错了当场报错。
 
 ---
 
@@ -265,11 +302,58 @@ if __name__ == "__main__":
 | 表格/列表显示成一坨 | `notes` 里用了不支持的 markdown（`#` 标题、编号列表、图片） |
 | 改了 `docs/` 里的 html 但线上没变 | 生成物不入库，推 `main` 让 CI 重新构建 |
 | 目录页顺序错乱 | 题号 id 没做 4 位零填充 |
+| 盲写模式没生效 | `site.js` 里 `initBlind()` 没被 `boot()` 调用，或 CSS 少了 `body.is-blind` 那条规则 |
+| `mock.py --check` 说找不到 class | 你的文件里类名要叫 `Solution`（或仓库 `snippets[0]` 那个名字），方法名要和仓库一致 |
 
 ---
 
-## 10. 参考
+## 10. 闭卷默写与面试模式
+
+这个仓库不只用来「看题解」，还用来**准备面试**。三条路径：
+
+### 10.1 网页盲写模式
+
+每道题页面顶部有一条「闭卷默写」工具条：
+
+- 点「进入盲写」→ **题面之外的内容全部隐藏**（动图、讲解、代码、复杂度、面试官视角），只留题面 + 计时器
+- 计时器按 `interview.minutes` 倒数，超时会标红；「重置计时」可以重新开始
+- 点「解除盲写」→ 全部内容回来，计时归零
+- 状态存在 `sessionStorage`，翻到下一题仍是盲写；也可以用 `?blind=1` 直接进入
+
+目录页有「随机盲写一题」按钮，直接随机进一题的盲写模式。
+
+> 盲写模式是 `site.js` 里 `initBlind()` 干的活，靠给 `<body>` 加 `is-blind` 类 + CSS 隐藏
+> `main > section:not(#blind)` 实现。**播放器里不允许出现任何题目相关逻辑**，这条规则同样适用。
+
+### 10.2 命令行闭卷默写 `tools/mock.py`
+
+```bash
+python3 tools/mock.py                              # 随机抽一题，只给题面，开始计时
+python3 tools/mock.py --list                       # 列出全部题目
+python3 tools/mock.py --id 0121                    # 指定题号
+python3 tools/mock.py --tag 动态规划,哈希表          # 按标签抽
+python3 tools/mock.py --difficulty 简单             # 按难度抽
+python3 tools/mock.py --id 0121 --reveal           # 直接看讲解 + 复杂度表
+python3 tools/mock.py --id 0001 --check mine.py    # 把你写的解和仓库解对拍
+python3 tools/mock.py --id 0001 --check mine.py --case '[[3,3],6]'   # 加自定义用例
+```
+
+- 题面只来自 `statement` + `demo.args`，**不泄露** `summary`（那是解法摘要）、`notes` 和代码
+- 计时结束会报用时，并对照 `interview.minutes` 给评价
+- `--check` 会导入你的文件和仓库的标准解，用 `demo.args` / `demo.compareArgs` / `--case` 逐个对拍，
+  答案是一组下标时**顺序不同也算对**
+- 对拍标准解 = 仓库里 `snippets[0]` 那个 class 的第一个方法
+
+### 10.3 「面试官视角」区块
+
+每道题页面上的「面试官视角」来自 `interview` 字段（§5.3）：3 分钟话术、高频坑、追问链（折叠）。
+**写的时候按「面试时怎么说」来写**，不要复述 `notes`。
+
+---
+
+## 11. 参考
 
 - `README.md` —— 目录结构、动图原理、每种可视化类型的用途、题目列表、要点回顾
 - `docs/assets/site.js` —— 播放器和全部渲染器的实现（帧字段以它为准）
 - `tools/build.py` —— 生成器（配置字段以它为准）
+- `tools/mock.py` —— 闭卷默写 CLI（抽题 / 计时 / 对拍）
