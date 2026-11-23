@@ -556,3 +556,87 @@ button.tag-btn.is-active b { color: var(--accent-foreground); }
   transition: border-color .15s ease, color .15s ease;
 }
 .secnav a:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ==================================================================
+   盲写模式（闭卷默写）
+   ================================================================== */
+
+.blind-panel { margin: 18px 0 0; }
+.blind-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.blind-btn {
+  font: inherit; font-weight: 600; font-size: .92rem;
+  padding: 7px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--muted); color: var(--foreground);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.blind-btn:hover { border-color: var(--accent); color: var(--accent); }
+.blind-btn.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-foreground); }
+.blind-btn.is-on:hover { color: var(--accent-foreground); opacity: .9; }
+.blind-btn.ghost { padding: 5px 12px; font-size: .84rem; font-weight: 500; }
+.blind-timer {
+  font-family: var(--font-mono); font-size: 1.08rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; min-width: 4.6ch;
+}
+.blind-timer.is-over { color: var(--red); }
+.blind-note { color: var(--muted-foreground); font-size: .9rem; }
+.blind-card { display: none; }
+body.is-blind .blind-card { display: block; }
+body.is-blind main > section:not(#blind) { display: none; }
+body.is-blind .blind-panel { padding-top: 4px; }
+body.is-blind .blind-bar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--background); padding: 10px 0; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.blind-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.blind-link {
+  margin-left: auto; font-size: .9rem; font-weight: 600;
+  color: var(--accent); text-decoration: none;
+}
+.blind-link:hover { text-decoration: underline; }
+.blind-stmt { font-size: 1rem; line-height: 1.72; }
+.blind-stmt p { margin: 0 0 10px; }
+.blind-k {
+  font-size: .74rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted-foreground); margin: 16px 0 6px;
+}
+.blind-card .md-code { margin: 0; }
+.blind-empty { color: var(--muted-foreground); }
+
+/* ==================================================================
+   面试官视角
+   ================================================================== */
+
+.iv-card { display: grid; gap: 20px; }
+.iv-k {
+  font-size: .74rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted-foreground); margin-bottom: 8px;
+}
+.iv-md > p:first-child { margin-top: 0; }
+.iv-md > p:last-child { margin-bottom: 0; }
+.iv-pit { margin: 0; }
+.iv-pit li { margin: 5px 0; }
+.iv-fus { display: grid; gap: 8px; }
+.iv-fu {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--muted); overflow: hidden;
+}
+.iv-fu > summary {
+  cursor: pointer; padding: 10px 14px; font-weight: 600; list-style: none;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.iv-fu > summary::-webkit-details-marker { display: none; }
+.iv-fu > summary::before { content: "▸"; color: var(--muted-foreground); flex: none; }
+.iv-fu[open] > summary::before { content: "▾"; }
+.iv-fu[open] > summary { border-bottom: 1px solid var(--border); }
+.iv-fu-a { padding: 10px 14px 12px; }
+.iv-fu-a > p:first-child { margin-top: 0; }
+.iv-fu-a > p:last-child { margin-bottom: 0; }
+
+.catalog-actions {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 0;
+}

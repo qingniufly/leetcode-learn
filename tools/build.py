@@ -21,6 +21,7 @@ import argparse
 import ast
 import html
 import importlib.util
+import inspect
 import json
 import re
 import sys
@@ -304,6 +305,7 @@ def build_lane(meta: dict, lane_cfg: dict, demo: dict) -> dict:
 
 
 def build_problem(meta: dict) -> dict:
+    validate_meta(meta)
     demo = meta.get("demo") or {}
     lanes = [build_lane(meta, lane, demo) for lane in demo.get("lanes", [])]
 
@@ -462,6 +464,234 @@ def render_formula_figure(fig: dict) -> str:
     ) % (title, subtitle, body)
 
 
+def render_interview(interview: dict) -> str:
+    """「面试官视角」：3 分钟话术 + 高频坑 + 追问链（答案折叠，点开才看）。"""
+    if not interview:
+        return ""
+    blocks = []
+
+    pitch = interview.get("pitch")
+    if pitch:
+        blocks.append(
+            '<div class="iv-block">'
+            '<div class="iv-k">3 分钟怎么讲</div>'
+            '<div class="md iv-md">%s</div>'
+            '</div>' % render_md(pitch)
+        )
+
+    pitfalls = interview.get("pitfalls") or []
+    if pitfalls:
+        items = "".join("<li>%s</li>" % md_inline(p) for p in pitfalls)
+        blocks.append(
+            '<div class="iv-block">'
+            '<div class="iv-k">最容易踩的坑</div>'
+            '<ul class="md-list iv-pit">%s</ul>'
+            '</div>' % items
+        )
+
+    followups = interview.get("followups") or []
+    if followups:
+        rows = []
+        for item in followups:
+            q = html.escape(str(item.get("q", "")))
+            a = render_md(str(item.get("a", "")))
+            rows.append(
+                '<details class="iv-fu">'
+                '<summary><span class="iv-fu-q">%s</span></summary>'
+                '<div class="md iv-fu-a">%s</div>'
+                '</details>' % (q, a)
+            )
+        blocks.append(
+            '<div class="iv-block">'
+            '<div class="iv-k">追问链（点开看参考答案）</div>'
+            '<div class="iv-fus">%s</div>'
+            '</div>' % "".join(rows)
+        )
+
+    if not blocks:
+        return ""
+    return (
+        '<section id="interview">'
+        '<div class="sec-head"><h2>面试官视角</h2>'
+        '<p>这一题在面试里怎么被问、怎么答、面试官会追着问什么。</p></div>'
+        '<div class="card iv-card">%s</div>'
+        '</section>' % "".join(blocks)
+    )
+
+
+def class_methods(code_src: str, class_name: str) -> list[str]:
+    """列出某个 class 里对外的方法名（第一个就是 LeetCode 上要实现的那个）。"""
+    tree = ast.parse(code_src)
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return [n.name for n in node.body
+                    if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")]
+    return []
+
+
+def demo_params(meta: dict) -> list[str]:
+    """从轨迹函数签名里借参数名，把样例输入显示成 `nums = [...]` 这样的形式。"""
+    demo = meta.get("demo") or {}
+    lanes = demo.get("lanes") or []
+    if not lanes:
+        return []
+    trace_name = lanes[0].get("trace")
+    if not trace_name:
+        return []
+    try:
+        code_path, module = _load_module(meta)
+        fn = getattr(module, trace_name, None)
+        if fn is None:
+            return []
+        return list(inspect.signature(fn).parameters)
+    except Exception:
+        return []
+
+
+def demo_inputs(meta: dict) -> list:
+    """demo 传给轨迹函数的实参（兼容旧的 input / compareInput 写法）。"""
+    demo = meta.get("demo") or {}
+    for lane in demo.get("lanes") or []:
+        if "args" in lane:
+            return lane["args"]
+    if "args" in demo:
+        return demo["args"]
+    return [demo.get("input", "")]
+
+
+def sample_output(meta: dict, args: list):
+    """算出样例输出（盲写模式的题面卡要用）。返回字符串，失败返回 None。"""
+    code_path = ROOT / meta["code"]
+    if not code_path.exists():
+        return None
+    class_name = (meta.get("snippets") or ["Solution"])[0]
+    methods = class_methods(read(code_path), class_name)
+    if not methods:
+        return None
+    try:
+        module = import_module(code_path)
+    except Exception:
+        return None
+
+    # 先试标准解
+    try:
+        value = getattr(getattr(module, class_name)(), methods[0])(*args)
+        return json.dumps(value, ensure_ascii=False)
+    except Exception:
+        pass
+
+    # 标准解调不通（例如入参是链表），改从轨迹最后一帧取结果
+    lanes = (meta.get("demo") or {}).get("lanes") or []
+    if not lanes:
+        return None
+    fn = getattr(module, lanes[0].get("trace"), None)
+    if fn is None:
+        return None
+    try:
+        frames = list(fn(*args))
+    except Exception:
+        return None
+    if not frames:
+        return None
+    result = frames[-1].get("result")
+    if (meta.get("demo") or {}).get("type") == "digits" and isinstance(result, list):
+        # digits 渲染器里 result 是低位在前，拼成十进制要反过来
+        return "".join(str(d) for d in reversed(result))
+    return None
+
+
+def render_blind(meta: dict) -> str:
+    """盲写模式：只留题面 + 计时器，其余内容全部藏起来，写完再解锁。"""
+    demo = meta.get("demo") or {}
+    interview = meta.get("interview") or {}
+    minutes = int(interview.get("minutes") or 20)
+    args = demo_inputs(meta)
+
+    samples = ""
+    if args:
+        names = demo_params(meta)
+        lines = []
+        for i, value in enumerate(args):
+            name = names[i] if i < len(names) else "arg%d" % i
+            lines.append("%s = %s" % (name, json.dumps(value, ensure_ascii=False)))
+        samples += (
+            '<div class="blind-k">样例输入</div>'
+            '<pre class="md-code">%s</pre>' % html.escape("\n".join(lines))
+        )
+        out = sample_output(meta, args)
+        if out is not None:
+            samples += (
+                '<div class="blind-k">样例输出</div>'
+                '<pre class="md-code">%s</pre>' % html.escape(out)
+            )
+
+    return (
+        '<section id="blind" class="blind-panel" data-blind data-limit="%d">'
+        '<div class="blind-bar">'
+        '<button type="button" class="blind-btn" data-blind-toggle>进入盲写</button>'
+        '<span class="blind-timer" data-blind-timer>00:00</span>'
+        '<span class="blind-note" data-blind-note>建议 %d 分钟 · 写完再解锁</span>'
+        '<button type="button" class="blind-btn ghost" data-blind-reset hidden>重置计时</button>'
+        '</div>'
+        '<div class="card blind-card">'
+        '<div class="blind-head">'
+        '<span class="diff diff-%s">%s</span>'
+        '%s'
+        '<a class="blind-link" href="https://leetcode.cn/problems/%s/" target="_blank" rel="noopener">在 LeetCode 上打开 ↗</a>'
+        '</div>'
+        '<div class="blind-stmt md">%s</div>'
+        '%s'
+        '</div>'
+        '</section>'
+    ) % (
+        minutes,
+        minutes,
+        difficulty_class(meta.get("difficulty", "")),
+        html.escape(meta.get("difficulty", "")),
+        render_tags(meta.get("tags", [])),
+        html.escape(meta["id"]),
+        render_md(meta.get("statement", "")) or
+        '<p class="blind-empty">这道题还没写题面，去 <code>problems/%s</code> 的 <code>statement</code> 字段补一条。</p>'
+        % html.escape(meta.get("_file", "")),
+        samples,
+    )
+
+
+def validate_meta(meta: dict) -> None:
+    """校验新增的可选字段，格式不对当场报错（--check 会跑这里）。"""
+    pid = meta.get("id", "?")
+
+    statement = meta.get("statement")
+    if statement is not None and not isinstance(statement, str):
+        raise SystemExit("[%s] statement 必须是字符串" % pid)
+
+    interview = meta.get("interview")
+    if interview is None:
+        return
+    if not isinstance(interview, dict):
+        raise SystemExit("[%s] interview 必须是一个对象" % pid)
+
+    if interview.get("pitch") is not None and not isinstance(interview["pitch"], str):
+        raise SystemExit("[%s] interview.pitch 必须是字符串" % pid)
+
+    minutes = interview.get("minutes")
+    if minutes is not None and not isinstance(minutes, int):
+        raise SystemExit("[%s] interview.minutes 必须是整数" % pid)
+
+    pitfalls = interview.get("pitfalls")
+    if pitfalls is not None:
+        if not isinstance(pitfalls, list) or not all(isinstance(p, str) for p in pitfalls):
+            raise SystemExit("[%s] interview.pitfalls 必须是字符串数组" % pid)
+
+    followups = interview.get("followups")
+    if followups is not None:
+        if not isinstance(followups, list):
+            raise SystemExit("[%s] interview.followups 必须是数组" % pid)
+        for i, item in enumerate(followups):
+            if not isinstance(item, dict) or not item.get("q"):
+                raise SystemExit("[%s] interview.followups[%d] 必须是含 q 的对象" % (pid, i))
+
+
 def render_tags(tags: list, clickable: bool = False) -> str:
     cls = "tag tag-card" if clickable else "tag"
     return "".join(
@@ -515,7 +745,11 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
             '<div class="card">%s</div></section>' % render_complexity(problem["complexity"])
         )
 
+    interview_section = render_interview(meta.get("interview"))
+    blind_section = render_blind(meta)
+
     sections = []
+    sections.append(("blind", "闭卷默写"))
     sections.append(("demo", "动图讲解"))
     if meta.get("notes"):
         sections.append(("notes", "解题思路"))
@@ -525,6 +759,8 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         sections.append(("one-row", "只要一行就够"))
     if formula_figure_section:
         sections.append(("why-formula", "公式怎么来的"))
+    if interview_section:
+        sections.append(("interview", "面试官视角"))
     sections.append(("code", "完整代码"))
     if has_complexity:
         sections.append(("complexity", "复杂度对比"))
@@ -537,10 +773,12 @@ def render_problem_page(problem: dict, prev_problem: dict | None, next_problem: 
         "DIFFICULTY_CLASS": difficulty_class(meta.get("difficulty", "")),
         "SECNAV": secnav,
         "ASSET_VERSION": asset_version(),
+        "BLIND_SECTION": blind_section,
         "NOTES_SECTION": notes_section,
         "FIGURE_SECTION": figure_section,
         "ROWFIGURE_SECTION": row_figure_section,
         "FORMULAFIGURE_SECTION": formula_figure_section,
+        "INTERVIEW_SECTION": interview_section,
         "COMPLEXITY_SECTION": complexity_section,
         "TITLE": html.escape(meta["title"]),
         "TITLE_EN": html.escape(meta.get("title_en", "")),

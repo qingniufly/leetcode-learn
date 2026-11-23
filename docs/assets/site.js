@@ -1036,12 +1036,94 @@
      启动
      ================================================================== */
 
+  /* ==================================================================
+     盲写模式：只留题面 + 计时器，写完再解锁
+     ================================================================== */
+
+  var BLIND_KEY = 'lc-blind';
+
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function initBlind() {
+    var panel = document.getElementById('blind');
+    if (!panel) return;
+    var btn = panel.querySelector('[data-blind-toggle]');
+    var timerEl = panel.querySelector('[data-blind-timer]');
+    var noteEl = panel.querySelector('[data-blind-note]');
+    var resetBtn = panel.querySelector('[data-blind-reset]');
+    var limit = Number(panel.dataset.limit || 0);
+    var start = 0, timer = null;
+
+    function render() {
+      var sec = start ? (Date.now() - start) / 1000 : 0;
+      timerEl.textContent = fmtClock(sec);
+      timerEl.classList.toggle('is-over', limit > 0 && sec > limit * 60);
+      if (limit > 0) {
+        var left = limit * 60 - sec;
+        noteEl.textContent = left >= 0
+          ? '还剩 ' + fmtClock(left) + '（建议 ' + limit + ' 分钟）'
+          : '已超时 ' + fmtClock(-left);
+      }
+    }
+
+    function setMode(on) {
+      document.body.classList.toggle('is-blind', on);
+      panel.classList.toggle('is-on', on);
+      btn.textContent = on ? '解除盲写' : '进入盲写';
+      btn.classList.toggle('is-on', on);
+      resetBtn.hidden = !on;
+      try { sessionStorage.setItem(BLIND_KEY, on ? '1' : '0'); } catch (e) {}
+      if (on) {
+        if (!start) start = Date.now();
+        if (!timer) timer = setInterval(render, 1000);
+      } else {
+        if (timer) { clearInterval(timer); timer = null; }
+        start = 0;
+        timerEl.textContent = '00:00';
+        timerEl.classList.remove('is-over');
+        if (limit > 0) noteEl.textContent = '建议 ' + limit + ' 分钟 · 写完再解锁';
+      }
+      render();
+      if (on) window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    btn.addEventListener('click', function () {
+      setMode(!document.body.classList.contains('is-blind'));
+    });
+    resetBtn.addEventListener('click', function () { start = Date.now(); render(); });
+
+    var want = /[?&]blind=1/.test(location.search);
+    if (!want) { try { want = sessionStorage.getItem(BLIND_KEY) === '1'; } catch (e) {} }
+    if (want) setMode(true);
+    else render();
+  }
+
+  /* 目录页：随机挑一题直接进盲写 */
+  function initRandomBlind() {
+    var btn = document.querySelector('[data-random-blind]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var cards = document.querySelectorAll('.pcard');
+      if (!cards.length) return;
+      var card = cards[Math.floor(Math.random() * cards.length)];
+      var href = card.getAttribute('href');
+      if (!href) return;
+      location.href = href + (href.indexOf('?') >= 0 ? '&' : '?') + 'blind=1';
+    });
+  }
+
   function boot() {
     initTabs();
     initFilter();
     initPathFigure();
     initRowFigure();
     initFormulaFigure();
+    initBlind();
+    initRandomBlind();
     var dataEl = document.getElementById('problem-data');
     var host = document.getElementById('player');
     if (!dataEl || !host) return;
